@@ -6,17 +6,24 @@
 APDS-Projekt
 ============
 
-Diese Dokumentation beschreibt die Nachfrageprognose, die Daten- und
-Trainingsskripte sowie die adaptive Fahrplanerstellung des WVV Adaptive Network
-Studio. Die beschriebenen Abläufe und Parameter entsprechen dem aktuellen
-Projektcode.
+Ziel des Applied-Data-Science-Projekts ist ein adaptives Netzwerkdesign für
+die WVV. Historische Fahrgastdaten werden zur Nachfrageprognose verwendet und
+in einen realistischen Fahrplanvorschlag unter begrenzter Fahrzeugkapazität
+übersetzt. Relevante KPIs vergleichen diesen Vorschlag mit dem bestehenden,
+statischen WVV-Fahrplan.
 
+Das Ergebnis ist ein Python-basiertes Desktop-Dashboard für Analyse,
+Prognose, Fahrplanvergleich und KPI-Auswertung.
+
+Für die Analyse wurde sich auf das Jahr 2025 konzentriert. 
+
+Inhalt
+------
 
 .. toctree::
    :maxdepth: 2
    :caption: Inhalt:
-
    Übersicht
-   predicition
+   prediciton
    scripts
    dashboard
