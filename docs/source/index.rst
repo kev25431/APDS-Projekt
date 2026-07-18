@@ -3,15 +3,20 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-APDS-Project documentation
-==========================
+APDS-Projekt
+============
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+Diese Dokumentation beschreibt die Nachfrageprognose, die Daten- und
+Trainingsskripte sowie die adaptive Fahrplanerstellung des WVV Adaptive Network
+Studio. Die beschriebenen Abläufe und Parameter entsprechen dem aktuellen
+Projektcode.
 
 
 .. toctree::
    :maxdepth: 2
-   :caption: Contents:
+   :caption: Inhalt:
 
+   Übersicht
+   predicition
+   scripts
+   dashboard
