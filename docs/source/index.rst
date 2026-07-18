@@ -15,7 +15,7 @@ statischen WVV-Fahrplan.
 Das Ergebnis ist ein Python-basiertes Desktop-Dashboard für Analyse,
 Prognose, Fahrplanvergleich und KPI-Auswertung.
 
-Für die Analyse wurde sich auf das Jahr 2025 konzentriert. 
+Für die Analyse wurde sich auf das Jahr 2025 konzentriert.
 
 Inhalt
 ------
@@ -23,6 +23,7 @@ Inhalt
 .. toctree::
    :maxdepth: 2
    :caption: Inhalt:
+
    Übersicht
    predicition
    scripts
