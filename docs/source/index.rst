@@ -24,6 +24,6 @@ Inhalt
    :maxdepth: 2
    :caption: Inhalt:
    Übersicht
-   prediciton
-   scripts
-   dashboard
+   Nachfrageprognose
+   Aufbereitungs- und Trainingsskripte
+   Dashboard und adaptive Fahrplanerstellung

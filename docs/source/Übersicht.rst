@@ -78,3 +78,7 @@ Die Codebasis ist in mehrere Module unterteilt, die jeweils spezifische Funktion
 ``scripts``
    Enthält Skripte zum Training der Prognosemodelle und des optionalen
    Gradient-Boosting-Optimizers für Fahrtenzahlen.
+
+Aufgabenteilung
+-----------------
+Die Aufgaben innerhalb des Projekts sind wie folgt verteilt:
