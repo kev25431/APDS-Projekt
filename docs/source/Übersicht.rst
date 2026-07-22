@@ -88,13 +88,14 @@ Die Aufgaben innerhalb des Projekts sind wie folgt verteilt:
 
    Coordinator: Kevin
       - Terminorganisation in der Gruppe 
+      - Read the Docs
    
    Hauptprogrammierer: Simon
       - endgültige abnahme aller codes auf korrektheit
 
    Code-Dokumentation: Welf
       - Codedokumentation jeglicher vorhandener codes
-      - Read The Docs (unterstützt durch Kevin)
+      - Read The Docs
 
 Logik:
    - Wie das Programm aufgebaut und dargsetellt werden sollte wurde in der Gruppe zusammen entschieden.
