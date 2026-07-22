@@ -138,3 +138,4 @@ Diese Dateien sind durch kommunikationsprobelem entstanden.
 
 Anfangschecks der Daten
    - analysis: Kevin, Welf
+   
