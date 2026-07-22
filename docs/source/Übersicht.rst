@@ -127,7 +127,7 @@ Logik:
       - timetable: Simon
       - widgets: Simon
 
-Diese Dateien sind durch kommunikationsprobelem entstanden, welche im verlauf angepasst in die Ordnerstruktur übernommen wurden.
+Diese Dateien sind durch kommunikationsprobelem entstanden sind.
    - Obsolete
       - distribution: Kevin
       - forecast_models: Kevin
