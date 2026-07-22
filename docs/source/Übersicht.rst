@@ -107,13 +107,9 @@ Logik:
 - Ordner
    - prediction:
       - boosting: Simon
-               - Unterstützend: Welf
       - data: Simon
-               - Unterstützend: Kevin
       - models: Simon
-               - Unterstützend: Welf
       - service: Simon
-               - Unterstützend: Kevin
 
    - scripts:
       - build_2025_enriched_parquets: Simon
