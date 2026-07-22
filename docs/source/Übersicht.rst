@@ -90,7 +90,7 @@ Die Aufgaben innerhalb des Projekts sind wie folgt verteilt:
    - Code-Dokumentation: Welf
 
    Coordinator:
-      - Terminorganisation in der Gruppe und betreuer
+      - Terminorganisation in der Gruppe 
    
    Hauptprogrammierer:
       - endgültige abnahme aller codes auf korrektheit
@@ -126,16 +126,15 @@ Logik:
       - timetable: Simon
       - widgets: Simon
 
-Diese Dateien sind durch kommunikationsprobelem entstanden.
+Diese Dateien sind durch Kommunikationsprobelem entstanden.
    - Obsolete
       - distribution: Kevin
       - forecast_models: Kevin
-      - gnn_forecast: Welf
+      - gnn_forecast: Welf, Kevin
       - gradient_boosting: Kevin
       - kpi_definitions: Welf
       - kpi_repository: Welf
-      - simulation: Kevin
+      - simulation: Welf, Kevin
 
 Anfangschecks der Daten
    - analysis: Kevin, Welf
-   

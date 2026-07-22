@@ -5,6 +5,7 @@ Das Python-Paket ``prediction`` prognostiziert die Nachfrage je Linie, Haltestel
 Stunde. Die Ausgabe enthält erwartete Ein- und Ausstiege. Daraus leitet der
 Service zusätzlich eine stündliche Empfehlung für die Zahl der Fahrten ab.
 
+
 Die konkrete Vergleichstabelle aus WVV- und adaptivem Fahrplan entsteht danach
 im Dashboard. Sie verwendet die Regeln aus ``wvv_dashboard/service_policy.py``
 und die vorhandenen WVV-Fahrplandaten. Das Gradient-Boosting-Modell in
