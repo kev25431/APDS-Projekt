@@ -134,7 +134,7 @@ Codeideen welche verworfen wurden.
       - gradient_boosting: Kevin
       - kpi_definitions: Welf
       - kpi_repository: Welf
-      - simulation: Welf, Kevin
+      - simulation: Kevin / code funktions check Welf
 
 Anfangschecks der Daten
    - analysis: Kevin, Welf
