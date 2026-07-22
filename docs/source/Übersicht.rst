@@ -126,7 +126,7 @@ Logik:
       - timetable: Simon
       - widgets: Simon
 
-Diese Dateien sind durch kommunikationsprobelem entstanden sind.
+Diese Dateien sind durch kommunikationsprobelem entstanden.
    - Obsolete
       - distribution: Kevin
       - forecast_models: Kevin
