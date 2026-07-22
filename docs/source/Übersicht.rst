@@ -85,19 +85,16 @@ Die Aufgaben innerhalb des Projekts sind wie folgt verteilt:
 
    Die Aufgaben wurden alle als Gruppe erledigt, von der Ideen suche bis zur Implementierung, aufgrund der zusammenhänge ist nicht eindeutig zu sagen wer was genau gemacht hat, hier ein versuchter überblick.
 
-   - Coordination: Kevin
-   - Hauptprogrammierer: Simon
-   - Code-Dokumentation: Welf
 
-   Coordinator:
+   Coordinator: Kevin
       - Terminorganisation in der Gruppe 
    
-   Hauptprogrammierer:
+   Hauptprogrammierer: Simon
       - endgültige abnahme aller codes auf korrektheit
 
-   Code-Dokumentation:
+   Code-Dokumentation: Welf
       - Codedokumentation jeglicher vorhandener codes
-      - Read The Docs: Kevin, Welf
+      - Read The Docs (unterstützt durch Kevin)
 
 Logik:
    - Wie das Programm aufgebaut und dargsetellt werden sollte wurde in der Gruppe zusammen entschieden.
@@ -126,7 +123,7 @@ Logik:
       - timetable: Simon
       - widgets: Simon
 
-Diese Dateien sind durch Kommunikationsprobelem entstanden.
+Codeideen welche verworfen wurden.
    - Obsolete
       - distribution: Kevin
       - forecast_models: Kevin
@@ -138,3 +135,9 @@ Diese Dateien sind durch Kommunikationsprobelem entstanden.
 
 Anfangschecks der Daten
    - analysis: Kevin, Welf
+
+Recherche/Informationen die bisher nicht dargestellt wurden:
+   - 
+
+Alternative Implementierungsansätze
+Im Verlauf der Projektarbeit wurden mehrere Konzepte und Codeideen erarbeitet. Durch unterschiedliche Entwicklungsstände und eine eingeschränkte Kommunikation innerhalb des Teams wurden nicht alle Ansätze in die finale Version übernommen.
