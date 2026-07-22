@@ -84,7 +84,7 @@ und berechnet pro Gruppe:
    * - Kontextspalten
      - Jeweiliges Maximum innerhalb der Gruppe
 
-Zusätzlich entstehen ``weekday`` (Montag ``0`` bis Sonntag ``6``), ``month``
+Zusätzlich entstehen ``weekday`` (Montag ``0`` bis Sonntag ``6``), ``month`` (``1-12``)
 und ``is_weekend``. Jede Haltestelle erhält außerdem über ``station_key`` eine
 interne numerische ``station_id``.
 
@@ -191,7 +191,7 @@ gesetzt. Die finale Prognose lautet getrennt nach Zielwert:
 
 Negative Modellwerte werden in der Ausgabe auf ``0`` begrenzt. Neben ``rf_mae``
 und ``gnn_mae`` wird auch ``ensemble_mae`` gespeichert. Diese Werte sind ein
-historisches Backtesting-Ergebnis; sie garantieren nicht die Genauigkeit einer
+historisches Backtesting-Ergebnis^, sie zeigen also wir gut das Modell auf zurückgehaltene Daten funktioniert hat; sie garantieren nicht die Genauigkeit einer
 Prognose für einen zukünftigen Tag.
 
 Prognosen für zukünftige Zeitpunkte
@@ -277,7 +277,9 @@ Die erforderliche Fahrtenzahl kombiniert Kapazität und historisches Profil:
 
 Solange mehr als eine Fahrt empfohlen wird und die Nachfrage je Fahrt unter
 ``avg_capacity * productive_share`` liegt, reduziert der Service die Empfehlung
-um eine Fahrt. Die Aktion lautet abhängig vom Ergebnis ``Verstärken``,
+um eine Fahrt. 
+
+Die Aktion lautet abhängig vom Ergebnis ``Verstärken``,
 ``Ausdünnen``, ``Halten`` oder bei Überschreitung des Flottenlimits
 ``Priorisieren``.
 

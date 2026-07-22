@@ -97,6 +97,7 @@ Die Aufgaben innerhalb des Projekts sind wie folgt verteilt:
 
    Code-Dokumentation:
       - dokumentation jeglicher vorhandener codes
+      - Read The Docs: Kevin, Welf
 
 Logik:
    - Wie das Programm aufgebaut und dargsetellt werden sollte wurde in der Gruppe zusammen entschieden.
@@ -129,9 +130,9 @@ Logik:
 Anfangsversuche, welche durch Kommunikationsprobleme entstanden sind und später andersweitig im code implementiert wurden.
    - Obsolete
       - distribution: Kevin
-      - forecast_models: Welf
-      - gnn_forecast: Kevin
-      - gradient_boosting:Kevin
+      - forecast_models: Kevin
+      - gnn_forecast: Welf
+      - gradient_boosting: Kevin
       - kpi_definitions: Welf
       - kpi_repository: Welf
-      - simulation: Welf
+      - simulation: Kevin
