@@ -1,5 +1,20 @@
 from __future__ import annotations
 
+"""
+Zentrale Konfiguration des Prediction-Teilprojekts.
+
+Dieses Modul definiert Pfade, Kontextmerkmale, Standardannahmen zur
+Fahrzeugkapazität sowie Hyperparameter für das Random-Forest-Training.
+Die Werte werden von Datenladern, Trainingsskripten und dem
+Vorhersageservice gemeinsam genutzt.
+
+Projektkontext:
+    Die hier definierten Konstanten bilden den gemeinsamen Nenner der
+    Nachfrageprognose. Insbesondere die Kontextspalten spiegeln die in der
+    Projektbeschreibung genutzten Kalender-, Ferien- und Eventmerkmale wider,
+    die zur Unterscheidung regulärer und besonderer Verkehrstage dienen.
+"""
+
 from pathlib import Path
 
 APP_DIR = Path(__file__).resolve().parent.parent
