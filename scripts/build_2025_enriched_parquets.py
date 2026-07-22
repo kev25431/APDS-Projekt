@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 import argparse
 import json
 import re
@@ -8,8 +9,10 @@ from datetime import date
 from pathlib import Path
 from typing import Iterable
 
+
 import pandas as pd
 import pyarrow.parquet as pq
+
 
 
 YEAR = 2025
@@ -79,8 +82,42 @@ MODEL_READY_STREET_COLUMNS = [
 ]
 
 
+
 @dataclass
 class ProcessStats:
+    """
+    Kapselt Verarbeitungsstatistiken für eine einzelne Quelldatei.
+
+    Die Datenklasse sammelt technische und fachlich relevante Kennzahlen eines
+    Verarbeitungslaufs, etwa Eingangs- und Ausgangszeilen, bereinigte Duplikate,
+    korrigierte negative Werte und Informationen zum optional erzeugten
+    Model-Ready-Export.
+
+    Parameter:
+        source_file (str): Name der Quelldatei.
+        output_file (str): Name der erzeugten Ausgabedatei.
+        rows_in (int): Anzahl Zeilen in der Quelldatei vor Filterung.
+        rows_2025 (int): Anzahl Zeilen nach Jahresfilterung.
+        rows_out (int): Anzahl Zeilen im bereinigten Ausgabedatensatz.
+        duplicate_rows_removed (int): Anzahl entfernter Dubletten.
+        negative_values_fixed (int): Anzahl korrigierter negativer Werte.
+        missing_values_filled (int): Anzahl imputierter fehlender Werte.
+        model_ready_file (str): Name der optional erzeugten ML-Datei.
+        model_ready_rows (int): Anzahl Zeilen im Model-Ready-Datensatz.
+        skipped (bool): Kennzeichen, ob die Datei übersprungen wurde.
+        reason (str): Begründung für das Überspringen.
+
+    Rückgabewerte:
+        ProcessStats: Instanz mit allen relevanten Laufkennzahlen.
+
+    Fehler/Sonderfälle:
+        Bei übersprungenen Dateien bleiben viele Kennzahlen auf 0; `reason`
+        dokumentiert den Grund.
+
+    Projektkontext:
+        Die Klasse strukturiert die Laufprotokollierung und bildet die Grundlage
+        für das Manifest der gesamten ETL-Ausführung.
+    """
     source_file: str
     output_file: str
     rows_in: int
@@ -95,12 +132,36 @@ class ProcessStats:
     reason: str = ""
 
 
+
 def parse_args() -> argparse.Namespace:
+    """
+    Parst die Kommandozeilenargumente des ETL-Skripts.
+
+    Die Funktion definiert Standardpfade für Rohdaten, Zusatzdaten,
+    Ausgabeverzeichnisse und den optionalen Model-Ready-Export. Über `argparse`
+    wird daraus eine nutzerfreundliche CLI mit Parametern und Hilfetexten
+    aufgebaut. [web:178]
+
+    Parameter:
+        Keine.
+
+    Rückgabewerte:
+        argparse.Namespace: Geparste Kommandozeilenargumente.
+
+    Fehler/Sonderfälle:
+        Ungültige Argumente werden durch `argparse` mit einer Fehlermeldung und
+        einem Programmabbruch behandelt.
+
+    Projektkontext:
+        Die Funktion ist der Einstiegspunkt für reproduzierbare und steuerbare
+        Batch-Verarbeitung der WVV-Daten.
+    """
     app_dir = Path(__file__).resolve().parents[1]
     default_input = app_dir / "downloads" / "wvv-pjs-2026" / "full_api_data"
     default_additional = app_dir / "downloads" / "wvv-pjs-2026" / "Additional Data"
     default_output = app_dir / "downloads" / "wvv-pjs-2026" / "full_api_data_enriched_2025"
     default_model_ready = app_dir / "downloads" / "wvv-pjs-2026" / "model_ready_2025"
+
 
     parser = argparse.ArgumentParser(
         description=(
@@ -120,7 +181,28 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+
 def date_range_frame(year: int) -> pd.DataFrame:
+    """
+    Erzeugt einen täglichen Kalenderrahmen für ein vollständiges Jahr.
+
+    Der resultierende DataFrame enthält für jeden Tag des Zieljahres zentrale
+    Kalendermerkmale wie Wochentag, Wochenendindikator und Monat. Damit bildet
+    er die Grundlage für das spätere Mergen weiterer externer Kontextdaten.
+
+    Parameter:
+        year (int): Zieljahr, für das der Datumsrahmen aufgebaut werden soll.
+
+    Rückgabewerte:
+        pd.DataFrame: Täglicher Kalenderrahmen mit Datums- und Basiszeitmerkmalen.
+
+    Fehler/Sonderfälle:
+        Keine explizite Fehlerbehandlung.
+
+    Projektkontext:
+        Die Funktion liefert das Grundgerüst für die spätere Kontextanreicherung
+        aller Verkehrsdaten.
+    """
     dates = pd.date_range(date(year, 1, 1), date(year, 12, 31), freq="D")
     frame = pd.DataFrame({"date": dates.date})
     frame["weekday"] = pd.to_datetime(frame["date"].astype(str)).dt.weekday
@@ -129,7 +211,31 @@ def date_range_frame(year: int) -> pd.DataFrame:
     return frame
 
 
+
 def read_csv_flexible(path: Path, **kwargs) -> pd.DataFrame:
+    """
+    Liest CSV-Dateien tolerant gegenüber unterschiedlichen Trennzeichen ein.
+
+    Die Funktion versucht zunächst einen regulären CSV-Import und fällt bei
+    Parserfehlern auf ein Semikolon als Trennzeichen zurück. Dadurch können
+    heterogene Zusatzdatenquellen robuster verarbeitet werden.
+
+    Parameter:
+        path (Path): Pfad zur einzulesenden CSV-Datei.
+        **kwargs: Weitere Argumente für `pandas.read_csv`.
+
+    Rückgabewerte:
+        pd.DataFrame: Eingelesener DataFrame oder ein leerer DataFrame, falls die
+        Datei nicht existiert.
+
+    Fehler/Sonderfälle:
+        Existiert die Datei nicht, wird ein leerer DataFrame zurückgegeben. Nur
+        `ParserError` löst den expliziten Fallback auf Semikolon aus.
+
+    Projektkontext:
+        Die Funktion erleichtert die Einbindung unterschiedlich formatierter
+        Zusatzdateien in den ETL-Prozess.
+    """
     if not path.exists():
         return pd.DataFrame()
     try:
@@ -138,7 +244,29 @@ def read_csv_flexible(path: Path, **kwargs) -> pd.DataFrame:
         return pd.read_csv(path, sep=";", **kwargs)
 
 
+
 def ensure_date_column(frame: pd.DataFrame, column: str = "date") -> pd.DataFrame:
+    """
+    Normalisiert eine Datums-Spalte auf Python-`date`-Werte.
+
+    Die Funktion konvertiert die angegebene Spalte tolerant nach Datum und
+    entfernt Zeilen, für die keine gültige Datumsinterpretation möglich ist.
+
+    Parameter:
+        frame (pd.DataFrame): Eingabedatenrahmen.
+        column (str): Name der zu normalisierenden Datumsspalte.
+
+    Rückgabewerte:
+        pd.DataFrame: Kopie des DataFrames mit bereinigter Datumsspalte.
+
+    Fehler/Sonderfälle:
+        Ist der DataFrame leer oder die Spalte nicht vorhanden, wird der Input
+        unverändert zurückgegeben.
+
+    Projektkontext:
+        Die Funktion stellt sicher, dass spätere Joins auf Tagesebene konsistent
+        und ohne Formatkonflikte möglich sind.
+    """
     if frame.empty or column not in frame.columns:
         return frame
     frame = frame.copy()
@@ -146,23 +274,54 @@ def ensure_date_column(frame: pd.DataFrame, column: str = "date") -> pd.DataFram
     return frame.dropna(subset=[column])
 
 
+
 def build_daily_context(additional_dir: Path, year: int) -> pd.DataFrame:
+    """
+    Baut den täglichen Kontextdatensatz aus externen Zusatzquellen auf.
+
+    Zusammengeführt werden gesetzliche Feiertage, Schulferien, Vorlesungszeiten,
+    Events sowie verkaufsoffene Sonntage. Fehlende Informationen werden
+    systematisch ergänzt, typisiert und in ein konsistentes Tagesformat
+    überführt.
+
+    Parameter:
+        additional_dir (Path): Verzeichnis mit Zusatzdateien.
+        year (int): Zieljahr der Kontextaufbereitung.
+
+    Rückgabewerte:
+        pd.DataFrame: Täglicher Kontextdatensatz.
+        pd.DataFrame: Stundenbezogener Event-Kontext für spätere Merges.
+
+    Fehler/Sonderfälle:
+        Fehlende oder leere Zusatzdateien werden tolerant behandelt; die
+        entsprechenden Merkmale werden dann mit 0 bzw. leeren Strings befüllt.
+
+    Projektkontext:
+        Die Funktion bündelt domänenspezifische Einflussfaktoren auf die
+        Fahrgastnachfrage und macht sie für spätere Modellierung nutzbar.
+    """
     context = date_range_frame(year)
+
 
     public_holidays = ensure_date_column(read_csv_flexible(additional_dir / "bavarian_public_holidays_daily.csv"))
     context = merge_daily(context, public_holidays, ["public_holiday", "nationwide"])
 
+
     school_holidays = ensure_date_column(read_csv_flexible(additional_dir / "bavarian_school_holidays_daily.csv"))
     context = merge_daily(context, school_holidays, ["school_holiday"])
+
 
     lectures_daily = ensure_date_column(read_csv_flexible(additional_dir / "lectures_daily.csv"))
     context = merge_daily(context, lectures_daily, ["lecture_period_jmu"])
 
+
     lectures = read_csv_flexible(additional_dir / "lectures.csv")
     context = merge_lecture_ranges(context, lectures)
 
+
     events, hourly_events = build_event_context(additional_dir, year)
     context = context.merge(events, on="date", how="left")
+
 
     open_sundays = ensure_date_column(read_csv_flexible(additional_dir / "verkaufsoffene_sonntage.csv"))
     if not open_sundays.empty:
@@ -174,6 +333,7 @@ def build_daily_context(additional_dir: Path, year: int) -> pd.DataFrame:
             on="date",
             how="left",
         )
+
 
     numeric_fill = {
         "public_holiday": 0,
@@ -197,6 +357,7 @@ def build_daily_context(additional_dir: Path, year: int) -> pd.DataFrame:
         context["verkaufsoffener_sonntag_name"] = ""
     context["verkaufsoffener_sonntag_name"] = context["verkaufsoffener_sonntag_name"].fillna("")
 
+
     int_columns = [
         "public_holiday",
         "nationwide",
@@ -212,10 +373,34 @@ def build_daily_context(additional_dir: Path, year: int) -> pd.DataFrame:
     for column in int_columns:
         context[column] = context[column].astype("int8" if context[column].max() <= 127 else "int16")
 
+
     return context, hourly_events
 
 
+
 def merge_daily(base: pd.DataFrame, other: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
+    """
+    Führt tägliche Kontextdaten selektiv in einen Basisrahmen ein.
+
+    Die Funktion merged nur die angeforderten und tatsächlich vorhandenen
+    Spalten und stellt sicher, dass bei fehlender Zusatzquelle die erwarteten
+    Zielspalten dennoch mit 0 existieren.
+
+    Parameter:
+        base (pd.DataFrame): Basisrahmen auf Tagesebene.
+        other (pd.DataFrame): Einzumergender Kontextdatensatz.
+        columns (list[str]): Erwartete Kontextspalten.
+
+    Rückgabewerte:
+        pd.DataFrame: Gemergter DataFrame mit den angeforderten Merkmalen.
+
+    Fehler/Sonderfälle:
+        Ist `other` leer, werden fehlende Zielspalten direkt im Basisrahmen mit 0 ergänzt.
+
+    Projektkontext:
+        Die Funktion standardisiert das Merging heterogener Tageskontexte und
+        reduziert Boilerplate-Code in der Kontextaufbereitung.
+    """
     if other.empty:
         for column in columns:
             if column not in base.columns:
@@ -226,16 +411,42 @@ def merge_daily(base: pd.DataFrame, other: pd.DataFrame, columns: list[str]) -> 
     return merged
 
 
+
 def merge_lecture_ranges(context: pd.DataFrame, lectures: pd.DataFrame) -> pd.DataFrame:
+    """
+    Überführt Vorlesungszeiträume in tägliche Indikatorvariablen.
+
+    Die Funktion interpretiert Start- und Enddaten aus der Vorlesungsdatei und
+    markiert im Kalenderrahmen die Tage, an denen Vorlesungsbetrieb für JMU
+    und/oder THWS stattfindet.
+
+    Parameter:
+        context (pd.DataFrame): Täglicher Kalender- bzw. Kontextrahmen.
+        lectures (pd.DataFrame): Datensatz mit Vorlesungszeiträumen.
+
+    Rückgabewerte:
+        pd.DataFrame: Kontextdatensatz mit ergänzten Vorlesungsindikatoren.
+
+    Fehler/Sonderfälle:
+        Fehlen erforderliche Spalten oder ist der Datensatz leer, wird
+        `lecture_period_thws` bei Bedarf mit 0 ergänzt und ansonsten der Input
+        weitgehend unverändert zurückgegeben.
+
+    Projektkontext:
+        Vorlesungszeiten sind ein fachlich relevanter Nachfragetreiber für den
+        ÖPNV in einer Studierendenstadt und werden hier auf Tagesebene kodiert.
+    """
     if lectures.empty or not {"start", "end"}.issubset(lectures.columns):
         if "lecture_period_thws" not in context.columns:
             context["lecture_period_thws"] = 0
         return context
 
+
     frame = context.copy()
     frame["lecture_period_thws"] = 0
     if "lecture_period_jmu" not in frame.columns:
         frame["lecture_period_jmu"] = 0
+
 
     lectures = lectures.copy()
     lectures["start"] = pd.to_datetime(lectures["start"], errors="coerce").dt.date
@@ -250,7 +461,31 @@ def merge_lecture_ranges(context: pd.DataFrame, lectures: pd.DataFrame) -> pd.Da
     return frame
 
 
+
 def build_event_context(additional_dir: Path, year: int) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Erzeugt täglichen und stündlichen Event-Kontext aus einer Eventdatei.
+
+    Die Funktion verdichtet Veranstaltungen auf Tagesebene zu Kennzahlen wie
+    Anzahl, Konzertanteil und Dauer und erstellt zusätzlich einen stündlichen
+    Kontext, der aktive Event- und Konzertstunden markiert.
+
+    Parameter:
+        additional_dir (Path): Verzeichnis mit Eventdateien.
+        year (int): Zieljahr.
+
+    Rückgabewerte:
+        tuple[pd.DataFrame, pd.DataFrame]: Tageskontext und Stundenkontext für Events.
+
+    Fehler/Sonderfälle:
+        Fehlen Eventdaten oder notwendige Spalten, werden leere bzw. mit 0
+        belegte Fallback-Strukturen zurückgegeben. Events werden auf das Zieljahr
+        zugeschnitten.
+
+    Projektkontext:
+        Events können kurzfristige Nachfrageimpulse erzeugen und werden deshalb
+        sowohl tages- als auch stundenbezogen modellierbar gemacht.
+    """
     base = date_range_frame(year)[["date"]]
     events = read_csv_flexible(additional_dir / "events.csv")
     if events.empty or not {"start", "end"}.issubset(events.columns):
@@ -266,6 +501,7 @@ def build_event_context(additional_dir: Path, year: int) -> tuple[pd.DataFrame, 
             base[column] = 0
         return base, empty_hourly
 
+
     events = events.copy()
     events["start"] = pd.to_datetime(events["start"], errors="coerce")
     events["end"] = pd.to_datetime(events["end"], errors="coerce")
@@ -274,6 +510,7 @@ def build_event_context(additional_dir: Path, year: int) -> tuple[pd.DataFrame, 
     if events.empty:
         empty_hourly = pd.DataFrame({"date": [], "hour": [], "event_hour": [], "concert_hour": []})
         return build_event_context_from_empty(base), empty_hourly
+
 
     events["date"] = events["start"].dt.date
     events["duration_hours"] = ((events["end"] - events["start"]).dt.total_seconds() / 3600).clip(lower=0)
@@ -290,6 +527,7 @@ def build_event_context(additional_dir: Path, year: int) -> tuple[pd.DataFrame, 
     daily["event_day"] = (daily["event_count"] > 0).astype("int8")
     daily["concert_day"] = (daily["concert_event_count"] > 0).astype("int8")
     daily = base.merge(daily, on="date", how="left")
+
 
     hourly_rows = []
     for _, row in events.iterrows():
@@ -319,7 +557,27 @@ def build_event_context(additional_dir: Path, year: int) -> tuple[pd.DataFrame, 
     return daily, hourly
 
 
+
 def build_event_context_from_empty(base: pd.DataFrame) -> pd.DataFrame:
+    """
+    Erzeugt einen leeren, aber schema-kompatiblen Event-Kontext.
+
+    Die Funktion ergänzt alle erwarteten Eventspalten mit 0, wenn keine
+    verwertbaren Eventdaten vorliegen.
+
+    Parameter:
+        base (pd.DataFrame): Basisrahmen mit Datumsspalte.
+
+    Rückgabewerte:
+        pd.DataFrame: Event-Kontext ohne aktive Events.
+
+    Fehler/Sonderfälle:
+        Keine explizite Fehlerbehandlung.
+
+    Projektkontext:
+        Die Funktion stellt sicher, dass nachgelagerte Pipelines auch ohne
+        Eventdaten ein stabiles Schema erhalten.
+    """
     frame = base.copy()
     for column in [
         "event_day",
@@ -333,7 +591,30 @@ def build_event_context_from_empty(base: pd.DataFrame) -> pd.DataFrame:
     return frame
 
 
+
 def build_street_hourly_context(additional_dir: Path, year: int) -> pd.DataFrame:
+    """
+    Aggregiert stündliche Innenstadt-Fußgänger- und Temperaturdaten.
+
+    Die Funktion liest Messdaten aus `dataAllStreets.csv`, filtert sie auf das
+    Zieljahr und verdichtet sie je Datum und Stunde zu stadtbezogenen
+    Bewegungs- und Wettermerkmalen.
+
+    Parameter:
+        additional_dir (Path): Verzeichnis mit Zusatzdaten.
+        year (int): Zieljahr der Aggregation.
+
+    Rückgabewerte:
+        pd.DataFrame: Stündlicher Straßenkontext mit aggregierten Kennzahlen.
+
+    Fehler/Sonderfälle:
+        Fehlende Dateien, Lesefehler, leere Daten oder fehlende Pflichtspalten
+        führen zu einem leeren DataFrame.
+
+    Projektkontext:
+        Die Funktion erweitert den Datensatz optional um externe urbane
+        Aktivitätsindikatoren, die für Fahrgastaufkommen relevant sein können.
+    """
     path = additional_dir / "dataAllStreets.csv"
     if not path.exists():
         return pd.DataFrame()
@@ -343,6 +624,7 @@ def build_street_hourly_context(additional_dir: Path, year: int) -> pd.DataFrame
         return pd.DataFrame()
     if streets.empty or not {"date", "hour"}.issubset(streets.columns):
         return pd.DataFrame()
+
 
     streets["date"] = pd.to_datetime(streets["date"], errors="coerce").dt.date
     streets["hour"] = pd.to_numeric(streets["hour"], errors="coerce")
@@ -359,6 +641,7 @@ def build_street_hourly_context(additional_dir: Path, year: int) -> pd.DataFrame
     ]:
         if column in streets.columns:
             streets[column] = pd.to_numeric(streets[column], errors="coerce")
+
 
     agg_map = {}
     if "pedestrians_count" in streets.columns:
@@ -377,21 +660,88 @@ def build_street_hourly_context(additional_dir: Path, year: int) -> pd.DataFrame
     return hourly
 
 
+
 def parquet_has_required_schema(path: Path) -> bool:
+    """
+    Prüft schnell, ob eine Parquet-Datei das erwartete Mindestschema besitzt.
+
+    Die Funktion nutzt `pyarrow.parquet.ParquetFile(...).schema.names`, um ohne
+    vollständiges Einlesen zu kontrollieren, ob die notwendige Spalte
+    `vehicle_station` vorhanden ist. [web:187]
+
+    Parameter:
+        path (Path): Pfad zur zu prüfenden Parquet-Datei.
+
+    Rückgabewerte:
+        bool: True bei vorhandenem Mindestschema, sonst False.
+
+    Fehler/Sonderfälle:
+        Jegliche Lesefehler oder ungültige Dateien führen zu False.
+
+    Projektkontext:
+        Die Funktion dient als frühe Qualitäts- und Formatprüfung, um
+        ungeeignete Dateien effizient aus dem ETL-Prozess auszuschließen.
+    """
     try:
         return REQUIRED_SCHEMA_COLUMN in pq.ParquetFile(path).schema.names
     except Exception:
         return False
 
 
+
 def filter_2025(frame: pd.DataFrame, year: int) -> pd.DataFrame:
+    """
+    Filtert einen Rohdatensatz auf das gewünschte Jahr.
+
+    Die Funktion leitet zunächst eine konsolidierte Datumsspalte aus
+    `main_date_day` oder ersatzweise `report_date` ab und behält anschließend
+    nur Zeilen des Zieljahres bei.
+
+    Parameter:
+        frame (pd.DataFrame): Rohdatensatz.
+        year (int): Zieljahr der Filterung.
+
+    Rückgabewerte:
+        pd.DataFrame: Auf das Zieljahr reduzierter DataFrame.
+
+    Fehler/Sonderfälle:
+        Nicht interpretierbare Datumswerte werden zu `NaT` bzw. `NaN` und beim
+        Jahresfilter ausgeschlossen.
+
+    Projektkontext:
+        Die Funktion sorgt dafür, dass die weitere Verarbeitung strikt auf den
+        fachlich vorgesehenen Archivzeitraum eingeschränkt bleibt.
+    """
     frame = frame.copy()
     date_source = "main_date_day" if "main_date_day" in frame.columns else "report_date"
     frame["date"] = pd.to_datetime(frame[date_source], errors="coerce").dt.date
     return frame[frame["date"].map(lambda value: pd.notna(value) and value.year == year)].copy()
 
 
+
 def add_hour_column(frame: pd.DataFrame) -> pd.DataFrame:
+    """
+    Leitet Stunden- und Minutenmerkmale aus verfügbaren Zeitstempeln ab.
+
+    Die Funktion durchsucht mehrere potenzielle Zeitspalten, übernimmt die erste
+    brauchbare Quelle und berechnet daraus sowohl die Stunde als auch die
+    Abfahrtsminute des Tages.
+
+    Parameter:
+        frame (pd.DataFrame): Eingabedatenrahmen mit Zeitstempeln.
+
+    Rückgabewerte:
+        pd.DataFrame: DataFrame mit ergänzten Zeitmerkmalen.
+
+    Fehler/Sonderfälle:
+        Wird keine brauchbare Zeitquelle gefunden, wird `hour` auf 0 gesetzt
+        und `departure_minute_of_day` aus dieser Stunde abgeleitet. Die Minute
+        des Tages wird auf den Bereich 0 bis 1439 begrenzt.
+
+    Projektkontext:
+        Die Funktion erzeugt zentrale zeitliche Features für spätere
+        Aggregation, Kontextverknüpfung und ML-Modellierung.
+    """
     frame = frame.copy()
     candidates = ["departure_plan_station", "departure_journey", "departure_plan_journey", "report_date"]
     parsed_source = None
@@ -421,15 +771,44 @@ def add_hour_column(frame: pd.DataFrame) -> pd.DataFrame:
     return frame
 
 
+
 def clean_and_impute(frame: pd.DataFrame) -> tuple[pd.DataFrame, int, int, int]:
+    """
+    Bereinigt Rohdaten, entfernt Dubletten und imputiert fehlende Werte.
+
+    Die Funktion ist das Herzstück der technischen Datenbereinigung. Sie
+    entfernt doppelte Ereignisse, neutralisiert unplausible negative Werte,
+    berechnet Fahrgaständerungen, imputiert Besetzungs- und
+    Auslastungsinformationen und füllt fehlende numerische wie kategoriale
+    Felder robust auf.
+
+    Parameter:
+        frame (pd.DataFrame): Zu bereinigender Rohdatensatz.
+
+    Rückgabewerte:
+        tuple[pd.DataFrame, int, int, int]: Bereinigter DataFrame, Anzahl
+        entfernter Dubletten, Anzahl korrigierter negativer Werte und Anzahl
+        gefüllter Fehlwerte.
+
+    Fehler/Sonderfälle:
+        Existiert `stop_event_id`, wird dedupliziert auf Ereignisebene,
+        andernfalls auf vollständigen Zeilen. Nicht interpretierbare Werte werden
+        zunächst in `NaN` überführt und dann imputiert.
+
+    Projektkontext:
+        Die Funktion erzeugt aus operativen Rohdaten eine stabile fachliche
+        Datengrundlage für Analyse- und Modellierungszwecke.
+    """
     rows_before = len(frame)
     missing_before = int(frame.isna().sum().sum())
+
 
     if "stop_event_id" in frame.columns:
         frame = frame.drop_duplicates(subset=["stop_event_id"])
     else:
         frame = frame.drop_duplicates()
     duplicate_rows_removed = rows_before - len(frame)
+
 
     negative_values_fixed = 0
     for column in NON_NEGATIVE_COLUMNS:
@@ -441,20 +820,24 @@ def clean_and_impute(frame: pd.DataFrame) -> tuple[pd.DataFrame, int, int, int]:
         values = values.mask(negative_mask)
         frame[column] = values
 
+
     for column in ["passenger_boarding", "passenger_exiting"]:
         if column in frame.columns:
             frame[column] = pd.to_numeric(frame[column], errors="coerce").fillna(0).round().astype("int32")
     if {"passenger_boarding", "passenger_exiting"}.issubset(frame.columns):
         frame["passenger_change"] = frame["passenger_boarding"] - frame["passenger_exiting"]
 
+
     if "occupancy_departure" in frame.columns:
         frame["occupancy_departure"] = pd.to_numeric(frame["occupancy_departure"], errors="coerce")
         frame = impute_occupancy(frame)
+
 
     for column in ["passenger_boarding_measured", "passenger_exiting_measured"]:
         if column in frame.columns:
             source = "passenger_boarding" if "boarding" in column else "passenger_exiting"
             frame[column] = pd.to_numeric(frame[column], errors="coerce").fillna(frame.get(source, 0)).round().astype("int32")
+
 
     if "vehicle_utilization" in frame.columns:
         util = pd.to_numeric(frame["vehicle_utilization"], errors="coerce")
@@ -462,6 +845,7 @@ def clean_and_impute(frame: pd.DataFrame) -> tuple[pd.DataFrame, int, int, int]:
         frame["vehicle_utilization"] = frame["vehicle_utilization"].fillna(
             frame.groupby("line")["vehicle_utilization"].transform("median")
         ).fillna(frame["vehicle_utilization"].median()).fillna(0)
+
 
     numeric_impute = [
         "quality_factor",
@@ -478,6 +862,7 @@ def clean_and_impute(frame: pd.DataFrame) -> tuple[pd.DataFrame, int, int, int]:
         if "line" in frame.columns:
             frame[column] = frame[column].fillna(frame.groupby("line")[column].transform("median"))
         frame[column] = frame[column].fillna(frame[column].median()).fillna(0)
+
 
     datetime_columns = [
         "report_date",
@@ -498,11 +883,13 @@ def clean_and_impute(frame: pd.DataFrame) -> tuple[pd.DataFrame, int, int, int]:
     if {"departure_journey", "departure_plan_journey"}.issubset(frame.columns):
         frame["departure_journey"] = frame["departure_journey"].fillna(frame["departure_plan_journey"])
 
+
     for column in frame.select_dtypes(include=["object", "string"]).columns:
         if column == "verkaufsoffener_sonntag_name":
             frame[column] = frame[column].fillna("")
         else:
             frame[column] = frame[column].fillna("Unknown")
+
 
     if "vehicle_station" in frame.columns:
         frame["vehicle_station"] = frame.groupby("journey")["vehicle_station"].ffill().bfill().fillna("Unknown")
@@ -511,12 +898,37 @@ def clean_and_impute(frame: pd.DataFrame) -> tuple[pd.DataFrame, int, int, int]:
         mode_by_vehicle = vehicle_type_by_vehicle.transform(lambda values: values.mode().iloc[0] if not values.mode().empty else "Unknown")
         frame["vehicle_type"] = frame["vehicle_type"].fillna(mode_by_vehicle).fillna("Unknown")
 
+
     missing_after = int(frame.isna().sum().sum())
     missing_values_filled = max(missing_before - missing_after, 0)
     return frame, duplicate_rows_removed, negative_values_fixed, missing_values_filled
 
 
+
 def impute_occupancy(frame: pd.DataFrame) -> pd.DataFrame:
+    """
+    Imputiert die Abfahrtsbelegung entlang einer Fahrtfolge.
+
+    Die Funktion nutzt, sofern verfügbar, die kumulierte Fahrgaständerung je
+    Fahrt als fachlich motivierte Schätzung der Besetzung und propagiert
+    bekannte Werte zusätzlich innerhalb derselben Fahrt per Vorwärts- und
+    Rückwärtsfüllung.
+
+    Parameter:
+        frame (pd.DataFrame): Datenrahmen mit Fahrgaständerungen und ggf.
+            Besetzungswerten.
+
+    Rückgabewerte:
+        pd.DataFrame: DataFrame mit imputierter `occupancy_departure`.
+
+    Fehler/Sonderfälle:
+        Fehlen die für die Kumulation nötigen Spalten, greift nur der
+        Vorwärts-/Rückwärts-Fallback. Fehlende Restwerte werden auf 0 gesetzt.
+
+    Projektkontext:
+        Die Funktion rekonstruiert ein fachlich wichtiges Lastmerkmal, das für
+        Kapazitätsbewertung und Modellierung relevant ist.
+    """
     sort_columns = [column for column in ["unique_journey", "journey", "stop_sequence"] if column in frame.columns]
     frame = frame.sort_values(sort_columns) if sort_columns else frame
     if {"passenger_change", "journey"}.issubset(frame.columns):
@@ -529,12 +941,40 @@ def impute_occupancy(frame: pd.DataFrame) -> pd.DataFrame:
     return frame
 
 
+
 def add_context(
     frame: pd.DataFrame,
     daily_context: pd.DataFrame,
     hourly_events: pd.DataFrame,
     street_hourly: pd.DataFrame,
 ) -> pd.DataFrame:
+    """
+    Ergänzt einen Fahrtdatensatz um tägliche und stündliche Kontextmerkmale.
+
+    Gemergt werden tägliche Kalender- und Eventmerkmale, stündliche
+    Eventindikatoren sowie optional Straßen- und Temperaturdaten. Fehlende
+    Kontextwerte werden anschließend systematisch auf 0 oder leere Strings gesetzt.
+
+    Parameter:
+        frame (pd.DataFrame): Bereinigter Fahrtdatensatz.
+        daily_context (pd.DataFrame): Tageskontext.
+        hourly_events (pd.DataFrame): Stundenkontext für Events.
+        street_hourly (pd.DataFrame): Optionaler Straßenkontext.
+
+    Rückgabewerte:
+        pd.DataFrame: Kontextangereicherter Fahrtdatensatz.
+
+    Fehler/Sonderfälle:
+        Ist kein stündlicher Eventkontext vorhanden, werden `event_hour` und
+        `concert_hour` direkt mit 0 ergänzt. Ein vorhandenes `weekday` wird bei
+        Bedarf zu `weekday_name` umbenannt, um Konflikte mit numerischen
+        Wochentagsmerkmalen zu vermeiden.
+
+    Projektkontext:
+        Die Funktion verbindet operative Fahrtdaten mit externen
+        Einflussvariablen und macht daraus einen fachlich reichhaltigen Datensatz
+        für Analyse und ML.
+    """
     if "weekday" in frame.columns and "weekday_name" not in frame.columns:
         frame = frame.rename(columns={"weekday": "weekday_name"})
     frame = frame.merge(daily_context, on="date", how="left", suffixes=("", "_context"))
@@ -545,6 +985,7 @@ def add_context(
         frame["concert_hour"] = 0
     if not street_hourly.empty:
         frame = frame.merge(street_hourly, on=["date", "hour"], how="left")
+
 
     fill_zero_columns = [
         column
@@ -561,17 +1002,82 @@ def add_context(
     return frame
 
 
+
 def output_name(source: Path, output_dir: Path, year: int) -> Path:
+    """
+    Erzeugt den Zieldateinamen für den angereicherten Parquet-Export.
+
+    Der Dateiname basiert auf dem Quellnamen und wird um einen standardisierten
+    Suffix mit Jahr ergänzt.
+
+    Parameter:
+        source (Path): Quelldatei.
+        output_dir (Path): Ausgabeverzeichnis.
+        year (int): Jahr des Exports.
+
+    Rückgabewerte:
+        Path: Zielpfad der bereinigten Kontextdatei.
+
+    Fehler/Sonderfälle:
+        Keine explizite Fehlerbehandlung.
+
+    Projektkontext:
+        Die Funktion sorgt für konsistente und nachvollziehbare Benennung der
+        ETL-Ausgabedateien.
+    """
     stem = re.sub(r"\.parquet$", "", source.name)
     return output_dir / f"{stem}_clean_context_{year}.parquet"
 
 
+
 def model_ready_output_name(source: Path, model_ready_dir: Path, year: int) -> Path:
+    """
+    Erzeugt den Zieldateinamen für den Model-Ready-Parquet-Export.
+
+    Der Dateiname basiert auf dem Quellnamen und erhält einen Suffix, der den
+    reduzierten, ML-tauglichen Charakter des Exports kennzeichnet.
+
+    Parameter:
+        source (Path): Quelldatei.
+        model_ready_dir (Path): Zielverzeichnis für ML-Dateien.
+        year (int): Jahr des Exports.
+
+    Rückgabewerte:
+        Path: Zielpfad der Model-Ready-Datei.
+
+    Fehler/Sonderfälle:
+        Keine explizite Fehlerbehandlung.
+
+    Projektkontext:
+        Die Funktion trennt fachlich den angereicherten Vollbestand vom
+        nachgelagerten Modellierungsdatensatz.
+    """
     stem = re.sub(r"\.parquet$", "", source.name)
     return model_ready_dir / f"{stem}_model_ready_{year}.parquet"
 
 
+
 def normalize_key(value: object) -> str:
+    """
+    Normalisiert freie Textwerte zu einem stabilen technischen Schlüssel.
+
+    Umlaute und Sonderzeichen werden vereinheitlicht, nicht-alphanumerische
+    Zeichen durch Unterstriche ersetzt und Leer- bzw. Nullfälle robust auf
+    `unknown` abgebildet.
+
+    Parameter:
+        value (object): Beliebiger Eingabewert, typischerweise ein Stationsname.
+
+    Rückgabewerte:
+        str: Normalisierter Schlüsselwert.
+
+    Fehler/Sonderfälle:
+        `None` oder leer wirkende Werte werden auf `unknown` abgebildet.
+
+    Projektkontext:
+        Die Funktion erzeugt robuste, systemverträgliche Schlüssel für
+        kategoriale ML-Merkmale wie Haltestellen.
+    """
     text = "" if value is None else str(value)
     text = text.strip().lower()
     text = (
@@ -584,7 +1090,33 @@ def normalize_key(value: object) -> str:
     return text.strip("_") or "unknown"
 
 
+
 def build_model_ready_frame(enriched: pd.DataFrame, year: int) -> pd.DataFrame:
+    """
+    Reduziert einen angereicherten Datensatz auf ein ML-taugliches Exportschema.
+
+    Die Funktion ergänzt weitere Zeitmerkmale, erzeugt stabile Stationsschlüssel,
+    wählt nur die für Modellierung vorgesehenen Spalten aus und setzt für alle
+    Merkmale eine explizite, pipelinesichere Typisierung durch. `to_parquet(...)`
+    kann den so erzeugten DataFrame anschließend effizient als Parquet-Datei
+    persistieren. [web:176]
+
+    Parameter:
+        enriched (pd.DataFrame): Vollständig bereinigter und angereicherter Datensatz.
+        year (int): Zieljahr; dient unter anderem als Fallback-Datum.
+
+    Rückgabewerte:
+        pd.DataFrame: Reduzierter, typsicherer und fehlwertfreier Model-Ready-Datensatz.
+
+    Fehler/Sonderfälle:
+        Es werden nur tatsächlich vorhandene Spalten exportiert. Am Ende wird
+        bewusst eine starke Garantie erzwungen: Es verbleiben keine fehlenden
+        Werte im Model-Ready-Export.
+
+    Projektkontext:
+        Die Funktion bildet den Übergang von allgemeiner Datenaufbereitung zur
+        konsistenten ML-Datenbasis für Trainings- und Prognosepipelines.
+    """
     frame = enriched.copy()
     date_values = pd.to_datetime(frame["date"].astype(str), errors="coerce")
     frame["day_of_year"] = date_values.dt.dayofyear.fillna(0).astype("int16")
@@ -594,12 +1126,14 @@ def build_model_ready_frame(enriched: pd.DataFrame, year: int) -> pd.DataFrame:
     else:
         frame["station_key"] = "unknown"
 
+
     selected_columns = [
         column
         for column in [*MODEL_READY_COLUMNS, *MODEL_READY_STREET_COLUMNS]
         if column in frame.columns
     ]
     model = frame[selected_columns].copy()
+
 
     categorical_columns = [
         "station",
@@ -612,6 +1146,7 @@ def build_model_ready_frame(enriched: pd.DataFrame, year: int) -> pd.DataFrame:
     for column in categorical_columns:
         if column in model.columns:
             model[column] = model[column].fillna("Unknown").astype("string")
+
 
     numeric_columns = [column for column in model.columns if column not in categorical_columns and column != "date"]
     for column in numeric_columns:
@@ -642,7 +1177,8 @@ def build_model_ready_frame(enriched: pd.DataFrame, year: int) -> pd.DataFrame:
         else:
             model[column] = model[column].fillna(0).astype("float32")
 
-    # Strong guarantee for downstream ML pipelines: no missing values in model-ready export.
+
+    # Starke Garantie fuer nachgelagerte ML-Pipelines: kein Missing Value im Model-Ready-Export.
     for column in model.columns:
         if column == "date":
             model[column] = pd.to_datetime(model[column].astype(str), errors="coerce").dt.date
@@ -652,6 +1188,7 @@ def build_model_ready_frame(enriched: pd.DataFrame, year: int) -> pd.DataFrame:
         else:
             model[column] = model[column].fillna(0)
     return model
+
 
 
 def process_file(
@@ -664,6 +1201,40 @@ def process_file(
     year: int,
     overwrite: bool,
 ) -> ProcessStats:
+    """
+    Verarbeitet eine einzelne Parquet-Quelldatei vollständig durch die ETL-Pipeline.
+
+    Die Funktion prüft zunächst, ob die Datei verarbeitet werden kann und muss,
+    liest sie dann ein, filtert auf das Zieljahr, bereinigt und imputiert Werte,
+    reichert Kontext an und schreibt anschließend den Voll- sowie optional den
+    Model-Ready-Export als Parquet-Dateien. Parquet-Export über
+    `DataFrame.to_parquet(...)` unterstützt dabei Engines wie `pyarrow` und
+    Kompression wie `snappy`. [web:176]
+
+    Parameter:
+        source (Path): Quelldatei.
+        output_dir (Path): Zielverzeichnis für den angereicherten Export.
+        model_ready_dir (Path | None): Optionales Zielverzeichnis für den
+            Model-Ready-Export.
+        daily_context (pd.DataFrame): Tageskontext.
+        hourly_events (pd.DataFrame): Stündlicher Eventkontext.
+        street_hourly (pd.DataFrame): Optionaler Straßenkontext.
+        year (int): Zieljahr.
+        overwrite (bool): Steuert, ob bestehende Dateien überschrieben werden.
+
+    Rückgabewerte:
+        ProcessStats: Statistiken und Status zur Verarbeitung der Datei.
+
+    Fehler/Sonderfälle:
+        Existieren Zielartefakte bereits und `overwrite` ist False, wird die
+        Datei übersprungen. Dateien ohne erforderliches Schema oder ohne Zeilen
+        des Zieljahres werden ebenfalls übersprungen.
+
+    Projektkontext:
+        Die Funktion ist die operative Kerneinheit der dateibasierten
+        Datenpipeline und verbindet alle Teilfunktionen zu einem vollständigen
+        Verarbeitungsablauf.
+    """
     destination = output_name(source, output_dir, year)
     model_destination = model_ready_output_name(source, model_ready_dir, year) if model_ready_dir is not None else None
     model_destination_ready = model_destination is None or model_destination.exists()
@@ -672,6 +1243,7 @@ def process_file(
     if not parquet_has_required_schema(source):
         return ProcessStats(source.name, destination.name, 0, 0, 0, 0, 0, 0, "", 0, True, "empty_or_invalid_schema")
 
+
     frame = pd.read_parquet(source)
     rows_in = len(frame)
     frame = filter_2025(frame, year)
@@ -679,9 +1251,11 @@ def process_file(
     if frame.empty:
         return ProcessStats(source.name, destination.name, rows_in, rows_2025, 0, 0, 0, 0, "", 0, True, "no_rows_for_year")
 
+
     frame = add_hour_column(frame)
     frame, duplicate_rows_removed, negative_values_fixed, missing_values_filled = clean_and_impute(frame)
     frame = add_context(frame, daily_context, hourly_events, street_hourly)
+
 
     destination.parent.mkdir(parents=True, exist_ok=True)
     frame.to_parquet(destination, index=False, engine="pyarrow", compression="snappy")
@@ -707,22 +1281,70 @@ def process_file(
     )
 
 
+
 def iter_candidate_files(input_dir: Path, year: int) -> Iterable[Path]:
-    # Filename filter keeps runtime down; row-level filtering still guarantees only the requested year is exported.
+    """
+    Liefert die zu verarbeitenden Kandidatendateien für ein Jahr.
+
+    Der Dateiname dient hier als schneller Vorfilter, um den Laufzeitaufwand zu
+    reduzieren. Die fachlich verbindliche Jahresfilterung erfolgt dennoch später
+    zeilenbasiert innerhalb der Daten.
+
+    Parameter:
+        input_dir (Path): Eingabeverzeichnis mit Parquet-Dateien.
+        year (int): Zieljahr.
+
+    Rückgabewerte:
+        Iterable[Path]: Sortierte Iterable passender Kandidatendateien.
+
+    Fehler/Sonderfälle:
+        Keine explizite Fehlerbehandlung.
+
+    Projektkontext:
+        Die Funktion reduziert den Suchraum des Batch-Laufs und verbessert die
+        Effizienz der Vorverarbeitung.
+    """
+    # Dateinamenfilter reduziert die Laufzeit; die zeilenweise Filterung garantiert spaeter trotzdem das Zieljahr.
     return sorted(input_dir.glob(f"*{year}*.parquet"))
 
 
+
 def main() -> None:
+    """
+    Führt den vollständigen Batch-Lauf der Datenaufbereitung aus.
+
+    Die Funktion parst die CLI-Argumente, baut alle benötigten Kontextdaten auf,
+    iteriert über passende Quelldateien, verarbeitet jede Datei einzeln und
+    schreibt abschließend ein Manifest mit Laufstatistiken als JSON-Datei.
+
+    Parameter:
+        Keine.
+
+    Rückgabewerte:
+        None: Die Funktion steuert den ETL-Lauf und schreibt Artefakte auf das Dateisystem.
+
+    Fehler/Sonderfälle:
+        Werden keine passenden Eingabedateien gefunden, wird das Programm mit
+        `SystemExit` abgebrochen. Das Manifest wird sowohl im Voll-Export als
+        auch optional im Model-Ready-Verzeichnis abgelegt.
+
+    Projektkontext:
+        `main()` ist der Kommandozeilen-Einstiegspunkt der gesamten
+        Aufbereitungspipeline und damit das Bindeglied zwischen Roharchiv,
+        Feature Engineering und ML-Export.
+    """
     args = parse_args()
     daily_context, hourly_events = build_daily_context(args.additional_dir, args.year)
     street_hourly = build_street_hourly_context(args.additional_dir, args.year) if args.include_streets else pd.DataFrame()
     model_ready_dir = None if args.no_model_ready else args.model_ready_dir
+
 
     files = list(iter_candidate_files(args.input_dir, args.year))
     if args.limit_files > 0:
         files = files[: args.limit_files]
     if not files:
         raise SystemExit(f"Keine Parquet-Dateien fuer {args.year} in {args.input_dir} gefunden.")
+
 
     stats: list[ProcessStats] = []
     for index, source in enumerate(files, start=1):
@@ -744,6 +1366,7 @@ def main() -> None:
             print(f"  -> {stat.rows_out:,} Zeilen -> {stat.output_file}".replace(",", "."))
             if stat.model_ready_file:
                 print(f"  -> {stat.model_ready_rows:,} ML-Zeilen -> {stat.model_ready_file}".replace(",", "."))
+
 
     manifest = {
         "year": args.year,
@@ -773,6 +1396,7 @@ def main() -> None:
     print(f"\nFertig. Manifest: {manifest_path}")
     if model_ready_dir is not None:
         print(f"Model-Ready-Manifest: {model_ready_dir / f'manifest_model_ready_{args.year}.json'}")
+
 
 
 if __name__ == "__main__":
