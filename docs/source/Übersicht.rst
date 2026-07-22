@@ -82,3 +82,56 @@ Die Codebasis ist in mehrere Module unterteilt, die jeweils spezifische Funktion
 Aufgabenteilung
 -----------------
 Die Aufgaben innerhalb des Projekts sind wie folgt verteilt:
+
+   Die Aufgaben wurden alle als Gruppe erledigt, von der Ideen suche bis zur Implementierung, hier wird gezielter veruscht aufzulisten wer für was vernatworltich war, alles in Absprache mit der gesamten Gruppe und überprüfung durch den Hauptprogrammierer
+
+   - Coordination: Kevin
+   - Hauptprogrammierer: Simon
+   - Code-Dokumentation: Welf
+
+   Coordinator:
+      - Terminorganisation in der Gruppe und betreuer
+   
+   Hauptprogrammierer:
+      - endgültige abnahme aller codes auf korrektheit
+
+   Code-Dokumentation:
+      - dokumentation jeglicher vorhandener codes
+
+Logik:
+   - Wie das Programm aufgebaut und dargsetellt werden sollte wurde in der Gruppe zusammen entschieden.
+   - Implementierung von welchen ML-modellen wurde von der gruppe zusammen entschieden.
+
+
+- Ordner
+   - prediction:
+      - boosting: Welf
+      - data: Kevin
+      - models: Welf
+      - service: Simon
+
+   - scripts:
+      - build_2025_enriched_parquets: Simon
+      - clean_timetables: Simon
+      - train_prediction_models: Welf
+      - train_timetable_boosting: Kevin
+
+
+   - wvv_dashboard: 
+      - app: - Hauptprogrammierer: Simon
+             - Unterstützend: Welf, Kevin
+      - config: Kevin
+      - kpis: Welf
+      - service_policy: Welf
+      - timetable: Simon
+      - widgets: Simon
+
+   - Obsolete
+      Anfangsversuche, welche durch Kommunikationsprobleme entstanden sind und später andersweitig im code implementiert wurden.
+      - distribution: Kevin
+      - forecast_models: Welf
+      - gnn_forecast: Kevin
+      - gradient_boosting:Kevin
+      - kpi_definitions: Welf
+      - kpi_repository: Welf
+      - simulation: Welf
