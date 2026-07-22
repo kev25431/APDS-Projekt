@@ -259,8 +259,8 @@ def clean_timetables(raw_dir: Path = TIMETABLE_RAW_DIR, clean_dir: Path = TIMETA
         records, routes = parse_table(path, raw_dir)
         if records:
             parsed_files += 1
-        all_records.extend(records)
-        all_routes.extend(routes)
+            all_records.extend(records)
+            all_routes.extend(routes)
 
     long_df = pd.DataFrame(all_records)
     route_df = pd.DataFrame(all_routes)
