@@ -98,8 +98,9 @@ Die Aufgaben innerhalb des Projekts sind wie folgt verteilt:
 
 Logik:
    - Wie das Programm aufgebaut und dargsetellt werden sollte wurde in der Gruppe zusammen entschieden.
-   - Implementierung von welchen ML-modellen wurde von der gruppe zusammen entschieden.
-
+   - Entscheidung welche ML-modellen verwendet und wie sie eingebaut wurden, wurde von der gruppe zusammen entschieden.
+   - Darstellungsformen wurden durch gruppenwahl entschieden.
+   - Jedes Teammitglied hat für alle inhalte Seperat recherche betrieben, welche am ende zusammengetragen wurde.
 
 - Ordner
    - prediction:
@@ -137,8 +138,6 @@ Codeideen welche verworfen wurden.
 Anfangschecks der Daten
    - analysis: Kevin, Welf
 
-Recherche/Informationen die bisher nicht dargestellt wurden:
-   - 
 
 
 
