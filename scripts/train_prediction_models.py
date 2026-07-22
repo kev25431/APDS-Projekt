@@ -1,5 +1,18 @@
 from __future__ import annotations
 
+"""
+CLI-Skript zum externen Training der Linienmodelle der Nachfrageprognose.
+
+Das Skript erlaubt Trainingsläufe außerhalb der GUI und steuert dabei
+Modellpriorisierung, Fortschrittsprotokoll, Stop-Signale und Logging. Es ist
+für Batchbetrieb und längere Trainingssitzungen ausgelegt.
+
+Projektkontext:
+    Trainiert werden die persistenten Linienmodelle des Prediction-Stacks auf
+    Basis der angereicherten 2025-Daten. Das Skript bildet damit die Brücke
+    zwischen Datenaufbereitung und produktiver Vorhersage im Dashboard.
+"""
+
 import argparse
 import gc
 import json
@@ -14,11 +27,10 @@ APP_DIR = Path(__file__).resolve().parents[1]
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
-from prediction import DemandPredictionService  # noqa: E402
-from prediction.config import ENRICHED_TRAINING_DIR, MODEL_DIR, OUTPUT_DIR  # noqa: E402
-from wvv_dashboard.app import TransitDataRepository  # noqa: E402
-from wvv_dashboard.config import DATA_DIR  # noqa: E402
-
+from prediction import DemandPredictionService # noqa: E402
+from prediction.config import ENRICHED_TRAINING_DIR, MODEL_DIR, OUTPUT_DIR # noqa: E402
+from wvv_dashboard.app import TransitDataRepository # noqa: E402
+from wvv_dashboard.config import DATA_DIR # noqa: E402
 
 STOP_FILE = OUTPUT_DIR / "train_prediction_models.stop"
 PID_FILE = OUTPUT_DIR / "train_prediction_models.pid"
@@ -27,10 +39,17 @@ LOG_FILE = OUTPUT_DIR / "train_prediction_models.log"
 
 
 def timestamp() -> str:
+    """Erzeugt einen einheitlichen Zeitstempel für Logs und Fortschrittsdateien."""
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def log(message: str) -> None:
+    """
+    Schreibt eine Logzeile gleichzeitig auf stdout und in die Logdatei.
+
+    So bleiben Trainingsläufe sowohl interaktiv beobachtbar als auch im
+    Nachhinein rekonstruierbar.
+    """
     line = f"[{timestamp()}] {message}"
     print(line, flush=True)
     with LOG_FILE.open("a", encoding="utf-8") as handle:
@@ -38,10 +57,24 @@ def log(message: str) -> None:
 
 
 def model_path_for_line(line: int) -> Path:
+    """
+    Liefert den Persistenzpfad des Linienmodells.
+
+    Die Namenskonvention ist zentral für die Erkennung bereits trainierter
+    Modelle und damit für Priorisierung, inkrementelles Training und
+    Wiederverwendung.
+    """
     return MODEL_DIR / f"wvv_prediction_lines_{int(line)}.pkl"
 
 
 def discover_enriched_lines() -> list[int]:
+    """
+    Erkennt automatisch alle Linien mit verfügbaren enriched-2025 Trainingsdaten.
+
+    Die Erkennung basiert auf der Dateinamenskonvention der angereicherten
+    Parquet-Dateien und erlaubt dadurch einen vollständig automatisierten
+    Batchlauf ohne explizite Linienliste.
+    """
     pattern = re.compile(r"data_2025-\d{2}-\d{2}_2025-\d{2}-\d{2}_line_(\d+)_clean_context_2025\.parquet$")
     lines: set[int] = set()
     if not ENRICHED_TRAINING_DIR.exists():
@@ -54,6 +87,12 @@ def discover_enriched_lines() -> list[int]:
 
 
 def parse_lines(raw_lines: list[str] | None) -> list[int]:
+    """
+    Parst Liniennummern aus CLI-Eingaben mit flexibler Trennzeichensyntax.
+
+    Unterstützt werden Leerzeichen, Komma und Semikolon. Ohne Eingabe werden
+    die Linien automatisch aus den verfügbaren Trainingsdateien abgeleitet.
+    """
     if not raw_lines:
         return discover_enriched_lines()
     lines: set[int] = set()
@@ -65,6 +104,13 @@ def parse_lines(raw_lines: list[str] | None) -> list[int]:
 
 
 def prioritize_untrained_lines(lines: list[int], force: bool) -> list[int]:
+    """
+    Sortiert Linien so, dass fehlende Modelle bevorzugt zuerst trainiert werden.
+
+    Ohne ``force`` werden bereits vorhandene Modelle nach hinten gestellt. Das
+    erhöht den praktischen Nutzen langer Batchläufe, weil zunächst Lücken im
+    Modellbestand geschlossen werden.
+    """
     if force:
         return lines
     untrained = [line for line in lines if not model_path_for_line(line).exists()]
@@ -73,11 +119,23 @@ def prioritize_untrained_lines(lines: list[int], force: bool) -> list[int]:
 
 
 def write_progress(payload: dict[str, object]) -> None:
+    """
+    Persistiert den aktuellen Trainingsstatus als JSON.
+
+    Die Fortschrittsdatei kann von anderen Prozessen, GUIs oder Statusbefehlen
+    gelesen werden und dient damit als einfache Interprozess-Schnittstelle.
+    """
     payload = {"updated_at": timestamp(), **payload}
     PROGRESS_FILE.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def read_progress() -> dict[str, object]:
+    """
+    Liest den zuletzt bekannten Trainingsfortschritt robust aus der JSON-Datei.
+
+    Fehlerhafte oder unvollständige Dateien führen nicht zum Abbruch, sondern
+    zu einem leeren Statusobjekt.
+    """
     if not PROGRESS_FILE.exists():
         return {}
     try:
@@ -87,6 +145,13 @@ def read_progress() -> dict[str, object]:
 
 
 def command_run(args: argparse.Namespace) -> int:
+    """
+    Führt das eigentliche Batch-Training der Linienmodelle aus.
+
+    Das Skript trainiert die Linien sequenziell, reagiert auf Stop-Dateien,
+    unterstützt Volltraining und inkrementelle Erweiterung und protokolliert
+    pro Linie Erfolg, Überspringen oder Fehler.
+    """
     lines = parse_lines(args.lines)
     if not lines:
         log(f"Keine enriched-2025 Parquet-Dateien gefunden: {ENRICHED_TRAINING_DIR}")
@@ -158,6 +223,7 @@ def command_run(args: argparse.Namespace) -> int:
                     "failed": failed,
                 }
             )
+
             try:
                 service = DemandPredictionService(repo)
                 result = service.fit(
@@ -199,12 +265,24 @@ def command_run(args: argparse.Namespace) -> int:
 
 
 def command_stop(_args: argparse.Namespace) -> int:
+    """
+    Fordert einen kontrollierten Trainingsstopp nach der aktuellen Linie an.
+
+    Der Stop erfolgt dateibasiert und ist damit unabhängig von direkter
+    Prozesskommunikation.
+    """
     STOP_FILE.write_text(f"stop requested at {timestamp()}\n", encoding="utf-8")
     print(f"Stop angefordert. Der Trainer beendet sich nach der aktuell laufenden Linie.\nStop-Datei: {STOP_FILE}")
     return 0
 
 
 def command_status(_args: argparse.Namespace) -> int:
+    """
+    Gibt PID, Stop-Status und den zuletzt gespeicherten Fortschritt aus.
+
+    Diese Funktion ist vor allem für längere Konsolen- oder Serverläufe
+    hilfreich, bei denen der Trainingsfortschritt extern abgefragt werden soll.
+    """
     progress = read_progress()
     pid = PID_FILE.read_text(encoding="utf-8").strip() if PID_FILE.exists() else "-"
     stop_requested = STOP_FILE.exists()
@@ -220,6 +298,13 @@ def command_status(_args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """
+    Erstellt die CLI mit den Kommandos ``run``, ``stop`` und ``status``.
+
+    Die Parameter spiegeln die zentralen Betriebsarten des Trainings wider:
+    automatischer Batchlauf, inkrementelles Training, erzwungenes Volltraining
+    und kontrolliertes Überspringen bestehender Modelle.
+    """
     parser = argparse.ArgumentParser(description="Trainiert gespeicherte WVV-Prediction-Modelle außerhalb der GUI.")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -246,6 +331,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """Parst CLI-Argumente und delegiert an das gewählte Unterkommando."""
     parser = build_parser()
     args = parser.parse_args()
     return int(args.func(args))

@@ -1,5 +1,14 @@
 from __future__ import annotations
 
+"""
+CLI-Skript für das Training des kostenbewussten Fahrplan-Boosting-Modells.
+
+Das Skript kapselt den iterativen oder kontinuierlichen Trainingsbetrieb des
+``TimetableGradientBoostingOptimizer``. Es bietet Fortschrittsdateien, Logging,
+Stop-Signale und die Möglichkeit, bestehende Modellstände inkrementell zu
+erweitern oder bewusst neu zu beginnen.
+"""
+
 import argparse
 import json
 import os
@@ -14,9 +23,8 @@ APP_DIR = Path(__file__).resolve().parents[1]
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
-from prediction.boosting import TimetableGradientBoostingOptimizer  # noqa: E402
-from prediction.config import ENRICHED_TRAINING_DIR, OUTPUT_DIR  # noqa: E402
-
+from prediction.boosting import TimetableGradientBoostingOptimizer # noqa: E402
+from prediction.config import ENRICHED_TRAINING_DIR, OUTPUT_DIR # noqa: E402
 
 STOP_FILE = OUTPUT_DIR / "train_timetable_boosting.stop"
 PID_FILE = OUTPUT_DIR / "train_timetable_boosting.pid"
@@ -25,10 +33,17 @@ LOG_FILE = OUTPUT_DIR / "train_timetable_boosting.log"
 
 
 def timestamp() -> str:
+    """Erzeugt einen konsistenten Zeitstempel für Log- und Statusdateien."""
     return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def log(message: str) -> None:
+    """
+    Schreibt Logmeldungen gleichzeitig in Konsole und Logdatei.
+
+    Diese doppelte Ausgabe ist besonders für längere Trainingsläufe im
+    Terminal oder Hintergrundbetrieb nützlich.
+    """
     line = f"[{timestamp()}] {message}"
     print(line, flush=True)
     with LOG_FILE.open("a", encoding="utf-8") as handle:
@@ -36,6 +51,12 @@ def log(message: str) -> None:
 
 
 def discover_enriched_lines() -> list[int]:
+    """
+    Erkennt automatisch alle Linien mit aufbereiteten enriched-2025 Trainingsdaten.
+
+    Die Dateinamenskonvention dient dabei als einfacher, aber stabiler
+    Selektionsmechanismus für den Batchbetrieb.
+    """
     pattern = re.compile(r"data_2025-\d{2}-\d{2}_2025-\d{2}-\d{2}_line_(\d+)_clean_context_2025\.parquet$")
     lines: set[int] = set()
     if not ENRICHED_TRAINING_DIR.exists():
@@ -48,6 +69,12 @@ def discover_enriched_lines() -> list[int]:
 
 
 def parse_lines(raw_lines: list[str] | None) -> list[int]:
+    """
+    Parst eine optionale Linienliste oder verwendet automatisch alle verfügbaren Linien.
+
+    Unterstützt werden gemischte Eingaben mit Leerzeichen, Komma oder
+    Semikolon als Trennzeichen.
+    """
     if not raw_lines:
         return discover_enriched_lines()
     lines: set[int] = set()
@@ -59,11 +86,25 @@ def parse_lines(raw_lines: list[str] | None) -> list[int]:
 
 
 def write_progress(payload: dict[str, object]) -> None:
+    """
+    Speichert den aktuellen Trainingsstatus des Boosting-Laufs.
+
+    Die JSON-Datei erlaubt Statusabfragen ohne direkte Kopplung an den
+    Trainingsprozess.
+    """
     payload = {"updated_at": timestamp(), **payload}
     PROGRESS_FILE.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
 def command_run(args: argparse.Namespace) -> int:
+    """
+    Führt das iterative Training des Fahrplan-Boosting-Modells aus.
+
+    Unterstützt werden feste Iterationszahlen ebenso wie ein Dauerlauf bis zum
+    manuellen Stopp. Nach der ersten Iteration wird ``reset`` deaktiviert,
+    sodass ein fortlaufender Lauf auf dem zuletzt erzeugten Modellstand
+    aufbauen kann.
+    """
     lines = parse_lines(args.lines)
     if not lines:
         log(f"Keine enriched-2025 Parquet-Dateien gefunden: {ENRICHED_TRAINING_DIR}")
@@ -93,6 +134,7 @@ def command_run(args: argparse.Namespace) -> int:
                     "cost_per_bus_hour": args.cost,
                 }
             )
+
             try:
                 result = optimizer.fit(
                     lines=lines,
@@ -102,6 +144,7 @@ def command_run(args: argparse.Namespace) -> int:
                     estimators_per_iteration=args.estimators,
                     warm_start=not args.reset,
                 )
+
                 log(result.message)
                 write_progress(
                     {
@@ -138,12 +181,24 @@ def command_run(args: argparse.Namespace) -> int:
 
 
 def command_stop(_args: argparse.Namespace) -> int:
+    """
+    Fordert einen sauberen Stop nach Abschluss der aktuellen Iteration an.
+
+    Das dateibasierte Stop-Signal ist einfach, robust und auch aus einer
+    zweiten Konsole auslösbar.
+    """
     STOP_FILE.write_text(timestamp(), encoding="utf-8")
     print(f"Stop angefordert: {STOP_FILE}")
     return 0
 
 
 def command_status(_args: argparse.Namespace) -> int:
+    """
+    Gibt den zuletzt bekannten Status des Boosting-Trainings aus.
+
+    Fehlt die Fortschrittsdatei, wurde entweder noch kein Lauf gestartet oder
+    der Status wurde noch nicht geschrieben.
+    """
     if PROGRESS_FILE.exists():
         print(PROGRESS_FILE.read_text(encoding="utf-8"))
     else:
@@ -152,6 +207,12 @@ def command_status(_args: argparse.Namespace) -> int:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """
+    Definiert die CLI-Kommandos für Start, Stop und Statusabfrage.
+
+    Die Parameter spiegeln die Kernhebel des Optimierers wider: Kostenansatz,
+    Anzahl neuer Bäume je Iteration, Dauerbetrieb und Reset des Modellstands.
+    """
     parser = argparse.ArgumentParser(description="Trainiert den kostenbewussten Gradient-Boosting-Fahrplanoptimizer.")
     sub = parser.add_subparsers(dest="command")
 
@@ -174,6 +235,12 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    """
+    Startet die CLI; ohne Unterkommando wird standardmäßig ``run`` ausgeführt.
+
+    Dadurch eignet sich das Skript auch für vereinfachte Batchaufrufe ohne
+    explizite Kommandoangabe.
+    """
     parser = build_parser()
     args = parser.parse_args()
     if args.command is None:

@@ -1,5 +1,19 @@
 from __future__ import annotations
 
+"""
+Bereinigung und Strukturierung extrahierter Fahrplan-CSV-Dateien.
+
+Das Skript transformiert tabellenförmige PDF/CSV-Extrakte in ein
+maschinenlesbares Long-Format sowie eine reduzierte Routenbeschreibung.
+Dabei werden Linien, Gültigkeitsdaten, Bedienzeiträume, Haltestellenfolgen und
+Abfahrtszeiten aus teils unstrukturierten Tabellen rekonstruiert.
+
+Projektkontext:
+    Die erzeugten Fahrplandaten bilden die Grundlage für spätere
+    Angebotsvergleiche, adaptive Fahrplanlogik und die Verknüpfung von
+    Prognosen mit realen Linien- und Haltestellenstrukturen.
+"""
+
 import argparse
 import json
 import re
@@ -13,9 +27,8 @@ APP_DIR = Path(__file__).resolve().parents[1]
 if str(APP_DIR) not in sys.path:
     sys.path.insert(0, str(APP_DIR))
 
-from prediction import normalize_station_name  # noqa: E402
-from wvv_dashboard.config import TIMETABLE_CLEAN_DIR, TIMETABLE_RAW_DIR  # noqa: E402
-
+from prediction import normalize_station_name # noqa: E402
+from wvv_dashboard.config import TIMETABLE_CLEAN_DIR, TIMETABLE_RAW_DIR # noqa: E402
 
 TIME_RE = re.compile(r"\b([0-2]?\d):([0-5]\d)\b")
 TABLE_RE = re.compile(r"__table_(\d+)\.csv$", re.IGNORECASE)
@@ -29,6 +42,13 @@ SERVICE_PATTERNS = [
 
 
 def clean_text(value: object) -> str:
+    """
+    Normalisiert Zellinhalte für robuste Mustererkennung.
+
+    Zeilenumbrüche und Mehrfachleerzeichen werden entfernt, damit später
+    reguläre Ausdrücke auf Fahrplanüberschriften, Haltestellen und Zeitangaben
+    konsistent angewendet werden können.
+    """
     text = "" if value is None else str(value)
     text = text.replace("\r", " ").replace("\n", " ")
     text = re.sub(r"\s+", " ", text)
@@ -36,6 +56,13 @@ def clean_text(value: object) -> str:
 
 
 def parse_line(path: Path, root: Path) -> int | None:
+    """
+    Leitet die Liniennummer aus Dateiname oder Ordnerstruktur ab.
+
+    Damit bleibt das Skript auch dann robust, wenn die Liniennummer nicht
+    sauber im Dateinamen, sondern nur im übergeordneten Linienordner enthalten
+    ist.
+    """
     match = LINE_RE.search(path.name)
     if match:
         return int(match.group(1))
@@ -45,6 +72,12 @@ def parse_line(path: Path, root: Path) -> int | None:
 
 
 def parse_effective_date(path: Path) -> str:
+    """
+    Extrahiert das Gültigkeitsdatum eines Fahrplanblatts aus dem Dateinamen.
+
+    Das Datum wird als ISO-Format zurückgegeben, damit es später konsistent in
+    tabellarischen Ausgaben und Vergleichen verwendet werden kann.
+    """
     match = EFFECTIVE_RE.search(path.name)
     if not match:
         return ""
@@ -56,11 +89,24 @@ def parse_effective_date(path: Path) -> str:
 
 
 def parse_table_number(path: Path) -> int:
+    """
+    Liest eine tabelleninterne Nummer aus dem Dateinamen aus.
+
+    Diese Nummer hilft dabei, unterschiedliche Tabellen eines PDFs oder
+    Fahrplanblatts im späteren Long-Format eindeutig zu unterscheiden.
+    """
     match = TABLE_RE.search(path.name)
     return int(match.group(1)) if match else -1
 
 
 def detect_service_period(frame: pd.DataFrame) -> tuple[str, str]:
+    """
+    Klassifiziert den Bedienzeitraum einer Tabelle heuristisch aus dem Kopfbereich.
+
+    Unterschieden werden Werktag, Samstag sowie Sonn-/Feiertag. Die ermittelte
+    Rohüberschrift wird zusätzlich gekürzt gespeichert, damit unklare oder
+    fehlerhafte Klassifikationen später nachvollzogen werden können.
+    """
     head_text = " ".join(clean_text(value) for value in frame.head(4).to_numpy().ravel())
     for key, pattern in SERVICE_PATTERNS:
         if pattern.search(head_text):
@@ -69,6 +115,13 @@ def detect_service_period(frame: pd.DataFrame) -> tuple[str, str]:
 
 
 def split_station_marker(raw_station: str, marker_cell: str) -> tuple[str, str]:
+    """
+    Trennt Haltestellenname und An-/Ab-Markierung.
+
+    In den Extrakten kann der Marker entweder in einer separaten Zelle oder
+    direkt am Namen hängen. Diese Funktion vereinheitlicht beide Fälle und
+    isoliert ``ab`` bzw. ``an`` als eigenes Merkmal.
+    """
     text = clean_text(raw_station)
     marker = clean_text(marker_cell).lower()
     if marker not in {"ab", "an"}:
@@ -82,11 +135,25 @@ def split_station_marker(raw_station: str, marker_cell: str) -> tuple[str, str]:
 
 
 def extract_times(value: object) -> list[str]:
+    """
+    Extrahiert alle Uhrzeiten aus einer Fahrplanzelle.
+
+    Mehrfachzeiten in derselben Zelle bleiben erhalten und werden in ihrer
+    Reihenfolge ausgegeben. Das ist wichtig für Spalten, die mehrere Fahrten
+    oder Varianten kodieren.
+    """
     text = clean_text(value)
     return [f"{int(hour):02d}:{minute}" for hour, minute in TIME_RE.findall(text)]
 
 
 def looks_like_station_row(row: pd.Series) -> bool:
+    """
+    Erkennt heuristisch, ob eine Tabellenzeile eine echte Haltestellenzeile ist.
+
+    Ausgeschlossen werden leere Zeilen, reine Nummernzeilen und Hinweise wie
+    „Verkehrshinweis“. Gleichzeitig muss mindestens eine Zeitangabe in den
+    späteren Spalten vorhanden sein.
+    """
     first = clean_text(row.iloc[0] if len(row) else "")
     if not first or first.lower().startswith("verkehrshinweis"):
         return False
@@ -96,6 +163,14 @@ def looks_like_station_row(row: pd.Series) -> bool:
 
 
 def parse_table(path: Path, root: Path) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    """
+    Zerlegt eine Fahrplantabelle in Long-Records und Routeninformationen.
+
+    Für jede erkannte Haltestellenzeile werden einerseits strukturierte
+    Haltestellenmetadaten erzeugt und andererseits alle Zeitangaben pro
+    Spalte/Fahrt als einzelne Long-Records geschrieben. Dadurch entstehen
+    sowohl eine Linienroute als auch ein fahrtenbezogenes Zeitraster.
+    """
     try:
         frame = pd.read_csv(path, dtype=str, keep_default_na=False)
     except Exception:
@@ -168,6 +243,13 @@ def parse_table(path: Path, root: Path) -> tuple[list[dict[str, object]], list[d
 
 
 def clean_timetables(raw_dir: Path = TIMETABLE_RAW_DIR, clean_dir: Path = TIMETABLE_CLEAN_DIR) -> dict[str, object]:
+    """
+    Bereinigt alle verfügbaren Fahrplanextrakte eines Rohordners.
+
+    Das Ergebnis umfasst ein fahrtenbezogenes Long-Format, eine deduplizierte
+    Routenbeschreibung sowie eine JSON-Zusammenfassung mit Dateizahlen,
+    Zeilenvolumina und Zielpfaden.
+    """
     clean_dir.mkdir(parents=True, exist_ok=True)
     files = [path for path in sorted(raw_dir.rglob("*.csv")) if path.name.lower() != "conversion_log.csv"]
     all_records: list[dict[str, object]] = []
@@ -177,8 +259,8 @@ def clean_timetables(raw_dir: Path = TIMETABLE_RAW_DIR, clean_dir: Path = TIMETA
         records, routes = parse_table(path, raw_dir)
         if records:
             parsed_files += 1
-            all_records.extend(records)
-            all_routes.extend(routes)
+        all_records.extend(records)
+        all_routes.extend(routes)
 
     long_df = pd.DataFrame(all_records)
     route_df = pd.DataFrame(all_routes)
@@ -223,11 +305,18 @@ def clean_timetables(raw_dir: Path = TIMETABLE_RAW_DIR, clean_dir: Path = TIMETA
             "route_parquet": str(route_parquet) if str(route_parquet) else "",
         },
     }
+
     summary_path.write_text(json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8")
     return summary
 
 
 def main() -> int:
+    """
+    Startet die CLI-Ausführung für die Fahrplanbereinigung.
+
+    Die JSON-Ausgabe auf stdout eignet sich zugleich als Kurzprotokoll für
+    Skriptketten oder manuelle Batchläufe.
+    """
     parser = argparse.ArgumentParser(description="Bereinigt WVV-Fahrplan-PDF-CSV-Extrakte in ein nutzbares Long-Format.")
     parser.add_argument("--raw-dir", type=Path, default=TIMETABLE_RAW_DIR)
     parser.add_argument("--clean-dir", type=Path, default=TIMETABLE_CLEAN_DIR)
