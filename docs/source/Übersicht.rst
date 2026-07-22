@@ -124,6 +124,7 @@ Logik:
       - widgets: Simon
 
 Codeideen welche verworfen wurden.
+- Im Verlauf der Projektarbeit wurden mehrere Konzepte und Codeideen erarbeitet. Durch unterschiedliche Entwicklungsstände und eine eingeschränkte Kommunikation innerhalb des Teams wurden nicht alle Ansätze in die finale Version übernommen.
    - Obsolete
       - distribution: Kevin
       - forecast_models: Kevin
@@ -139,5 +140,5 @@ Anfangschecks der Daten
 Recherche/Informationen die bisher nicht dargestellt wurden:
    - 
 
-Alternative Implementierungsansätze
-Im Verlauf der Projektarbeit wurden mehrere Konzepte und Codeideen erarbeitet. Durch unterschiedliche Entwicklungsstände und eine eingeschränkte Kommunikation innerhalb des Teams wurden nicht alle Ansätze in die finale Version übernommen.
+
+
