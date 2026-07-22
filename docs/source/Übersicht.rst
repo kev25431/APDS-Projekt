@@ -106,10 +106,14 @@ Logik:
 
 - Ordner
    - prediction:
-      - boosting: Welf
-      - data: Kevin
-      - models: Welf
+      - boosting: Simon
+               - Unterstützend: Welf
+      - data: Simon
+               - Unterstützend: Kevin
+      - models: Simon
+               - Unterstützend: Welf
       - service: Simon
+               - Unterstützend: Kevin
 
    - scripts:
       - build_2025_enriched_parquets: Simon
@@ -119,7 +123,7 @@ Logik:
 
 
    - wvv_dashboard: 
-      - app: - Hauptprogrammierer: Simon
+      - app: Simon
              - Unterstützend: Welf, Kevin
       - kpis: Welf
       - service_policy: Welf
