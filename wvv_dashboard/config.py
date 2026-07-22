@@ -3,6 +3,20 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+"""
+Zentrale Projektkonfiguration für Pfade, Kartenparameter und UI-Konstanten.
+
+Das Modul bündelt feste Projektressourcen wie Datenverzeichnisse, Hilfsdateien,
+Karteneinstellungen und die Farbpalette der Oberfläche. Dadurch greifen
+Dashboard, KPI-Berechnung, Fahrplanvergleich und weitere Komponenten auf
+dieselben Konstanten zu und vermeiden verstreute Hardcodierungen.
+
+Projektkontext:
+    Die hier definierten Werte bilden die gemeinsame statische Grundlage für
+    Datenzugriff, Visualisierung, Kartenanimation und GUI-Gestaltung im
+    Gesamtsystem.
+"""
+
 APP_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = APP_DIR / "downloads" / "wvv-pjs-2026" / "full_api_data"
 ADDITIONAL_DATA_DIR = APP_DIR / "downloads" / "wvv-pjs-2026" / "Additional Data"

@@ -6,6 +6,21 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class ServicePolicy:
+    """
+    Bündelt linientypspezifische Regeln für die adaptive Angebotsplanung.
+
+    Die Klasse hält fachliche Parameter fest, die für die Ableitung eines
+    angepassten Fahrtenangebots verwendet werden. Dazu zählen Mindestbedienung,
+    maximal zulässige Taktabstände, Zielauslastung, Produktivitätsschwelle und
+    angenommene Umlaufzeit je Linie bzw. Linienkategorie.
+
+    Projektkontext:
+        Die Parameter werden von der adaptiven Fahrtenheuristik sowie von
+        KPI-Berechnungen verwendet, um betriebliche Entscheidungen nicht rein
+        nach Nachfrage, sondern zusätzlich nach Service- und Wirtschaftlichkeits-
+        regeln zu steuern.
+    """
+
     name: str
     min_runs_when_active: int
     max_headway_minutes: int
@@ -24,6 +39,29 @@ COMMUTER_FEEDER_LINES = {8, 13, 21, 27, 29, 33, 54, 55}
 
 
 def service_policy_for_line(line: int | float | str | None) -> ServicePolicy:
+    """
+    Ordnet einer Linie eine vordefinierte Service-Policy zu.
+
+    Die Funktion klassifiziert Linien in grobe Betriebskategorien wie
+    Uni-/Hauptkorridor, Stadt-Hauptlinie oder Pendler-/Grundversorgung.
+    Auf Basis dieser Kategorie werden feste Schwellenwerte für die adaptive
+    Planung zurückgegeben.
+
+    Parameter:
+        line (int | float | str | None): Linienkennung in numerischer oder
+            textueller Form.
+
+    Rückgabewerte:
+        ServicePolicy: Passende Richtlinie für die angegebene Linie.
+
+    Fehler/Sonderfälle:
+        Nicht numerisch interpretierbare Linienwerte werden defensiv behandelt
+        und fallen auf die Standardlinie zurück.
+
+    Projektkontext:
+        Die Funktion bildet die zentrale Zuordnungsschicht zwischen
+        Linienidentität und betrieblicher Angebotslogik.
+    """
     try:
         line_number = int(float(line)) if line is not None else None
     except (TypeError, ValueError):
@@ -42,6 +80,7 @@ def service_policy_for_line(line: int | float | str | None) -> ServicePolicy:
             max_extra_runs=4,
             max_new_runs=3,
         )
+
     if line_number in CITY_CORE_LINES:
         return ServicePolicy(
             name="Stadt-Hauptlinie",
@@ -55,6 +94,7 @@ def service_policy_for_line(line: int | float | str | None) -> ServicePolicy:
             max_extra_runs=3,
             max_new_runs=2,
         )
+
     if line_number in COMMUTER_FEEDER_LINES:
         return ServicePolicy(
             name="Pendler-/Grundversorgung",
@@ -68,6 +108,7 @@ def service_policy_for_line(line: int | float | str | None) -> ServicePolicy:
             max_extra_runs=3,
             max_new_runs=2,
         )
+
     return ServicePolicy(
         name="Standardlinie",
         min_runs_when_active=1,
@@ -83,6 +124,19 @@ def service_policy_for_line(line: int | float | str | None) -> ServicePolicy:
 
 
 def is_peak_hour(hour: int | float | None) -> bool:
+    """
+    Prüft, ob eine Stunde als Hauptverkehrszeit behandelt wird.
+
+    Als Peak gelten hier die morgendlichen und nachmittäglichen
+    Verkehrsspitzen. Die Einordnung beeinflusst insbesondere strengere
+    Taktgrenzen innerhalb der adaptiven Angebotslogik.
+
+    Parameter:
+        hour (int | float | None): Zu prüfende Stunde.
+
+    Rückgabewerte:
+        bool: ``True`` für Peak-Stunden, sonst ``False``.
+    """
     if hour is None:
         return False
     hour_int = int(hour) % 24
@@ -90,6 +144,21 @@ def is_peak_hour(hour: int | float | None) -> bool:
 
 
 def estimated_bus_hours(runs: float, line: int | float | str | None = None) -> float:
+    """
+    Schätzt Busstunden aus Fahrtenzahl und angenommener Umlaufzeit.
+
+    Die Funktion verwendet die in der Service-Policy hinterlegte
+    linientypische Umlaufdauer, um aus einer Fahrtenanzahl eine
+    approximierte Betriebszeit zu berechnen.
+
+    Parameter:
+        runs (float): Anzahl geplanter oder beobachteter Fahrten.
+        line (int | float | str | None): Linienkennung zur Auswahl der
+            passenden Umlaufzeit.
+
+    Rückgabewerte:
+        float: Geschätzte Busstunden.
+    """
     policy = service_policy_for_line(line)
     return max(0.0, _to_float(runs, 0.0)) * policy.cycle_minutes / 60.0
 
@@ -105,6 +174,42 @@ def constrained_adaptive_runs(
     hour: int | float | None = None,
     allow_new_service: bool = True,
 ) -> int:
+    """
+    Berechnet eine begrenzte adaptive Fahrtenempfehlung.
+
+    Die Heuristik verbindet Nachfrage, vorhandenes Basisangebot,
+    durchschnittliche Kapazität und Kostenparameter mit fachlichen
+    Servicegrenzen. Dabei werden Komfortauslastung, Mindestproduktivität,
+    Taktvorgaben, Anteil des Basisangebots und eine Obergrenze für zusätzliche
+    Fahrten gemeinsam berücksichtigt.
+
+    Parameter:
+        demand (float): Erwartete Nachfrage in der betrachteten Stunde.
+        baseline_runs (float): Fahrtenzahl des bestehenden Angebots.
+        avg_capacity (float): Durchschnittliche Fahrzeugkapazität.
+        cost_per_bus_hour (float): Aktueller Kostensatz je Busstunde.
+        default_cost_per_bus_hour (float): Referenzkostensatz zur Einordnung
+            des Kostendrucks.
+        line (int | float | str | None): Linienkennung für die passende Policy.
+        hour (int | float | None): Stunde zur Peak-Erkennung.
+        allow_new_service (bool): Steuert, ob bei fehlendem Bestand neue
+            Bedienung aufgebaut werden darf.
+
+    Rückgabewerte:
+        int: Empfohlene Zahl an Fahrten für die Stunde.
+
+    Fehler/Sonderfälle:
+        Bei fehlendem Basisangebot und deaktivierter Neubedienung wird direkt
+        ``0`` zurückgegeben. Ungültige oder nicht endliche Eingabewerte werden
+        über robuste Standardwerte abgefangen. Die Kapazität wird zusätzlich
+        auf mindestens 35 Plätze begrenzt, um unrealistische Kleinstwerte zu
+        vermeiden.
+
+    Projektkontext:
+        Diese Funktion ist der fachliche Kern der adaptiven Angebotsplanung und
+        wird sowohl in KPI-Auswertungen als auch in Fahrplanvergleichen
+        verwendet.
+    """
     policy = service_policy_for_line(line)
     demand = max(0.0, _to_float(demand, 0.0))
     baseline = max(0, int(round(_to_float(baseline_runs, 0.0))))
@@ -157,6 +262,19 @@ def constrained_adaptive_runs(
 
 
 def _to_float(value: object, default: float) -> float:
+    """
+    Konvertiert einen Wert robust in ``float``.
+
+    Die Hilfsfunktion dient der defensiven Verarbeitung heterogener Eingaben
+    aus DataFrames, Konfigurationswerten oder UI-Komponenten.
+
+    Parameter:
+        value (object): Zu konvertierender Wert.
+        default (float): Rückfallwert bei ungültiger Eingabe.
+
+    Rückgabewerte:
+        float: Endlicher numerischer Wert.
+    """
     try:
         number = float(value)
     except (TypeError, ValueError):
