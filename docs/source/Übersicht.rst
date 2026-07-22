@@ -83,18 +83,18 @@ Aufgabenteilung
 -----------------
 Die Aufgaben innerhalb des Projekts sind wie folgt verteilt:
 
-   Die Aufgaben wurden alle als Gruppe erledigt, von der Ideen suche bis zur Implementierung, aufgrund der zusammenhänge ist nicht eindeutig zu sagen wer was genau gemacht hat, hier ein versuchter überblick.
-
    Da alle Teilnehmer über verschieden Wissenstände verfügen wurden Aufgaben unterschiedlich gewichtet verteilt.
+
+   Die Aufgaben wurden alle als Gruppe erledigt, von der Ideen suche bis zur Programmierung, aufgrund der zusammenhänge ist nicht eindeutig zu sagen wer was genau gemacht hat, hier ein versuchter überblick.
+   
 
    Kevin
       - Terminorganisation in der Gruppe 
       - Theorie Recherche
       - Aufsetzen Read the Docs
-      
    
    Simon
-      - Implementierung der Zusammengefassten Ideen
+      - Haputverantwortlicher für die Implementierung der Zusammengefassten Ideen nach Teamabsprache
 
    Welf
       - Codedokumentation jeglicher vorhandener codes
@@ -105,7 +105,6 @@ Logik:
    - Wie das Programm aufgebaut und dargsetellt werden sollte wurde in der Gruppe zusammen entschieden.
    - Entscheidung welche ML-modellen verwendet und wie sie eingebaut wurden, wurde von der gruppe zusammen entschieden.
    - Darstellungsformen wurden durch gruppenwahl entschieden.
-   - Jedes Teammitglied hat für alle inhalte Seperat recherche betrieben, welche am ende zusammengetragen wurde.
 
 - Ordner
    - prediction:
@@ -122,8 +121,7 @@ Logik:
 
 
    - wvv_dashboard: 
-      - app: Simon
-             - Unterstützend: Welf, Kevin
+      - app: Simon, Welf, Kevin
       - kpis: Welf
       - service_policy: Welf
       - timetable: Simon
