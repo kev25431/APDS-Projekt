@@ -83,7 +83,7 @@ Aufgabenteilung
 -----------------
 Die Aufgaben innerhalb des Projekts sind wie folgt verteilt:
 
-   Die Aufgaben wurden alle als Gruppe erledigt, von der Ideen suche bis zur Implementierung, hier wird gezielter veruscht aufzulisten wer für was vernatworltich war, alles in Absprache mit der gesamten Gruppe und überprüfung durch den Hauptprogrammierer
+   Die Aufgaben wurden alle als Gruppe erledigt, von der Ideen suche bis zur Implementierung, aufgrund der zusammenhänge ist nicht eindeutig zu sagen wer was genau gemacht hat, hier ein versuchter überblick.
 
    - Coordination: Kevin
    - Hauptprogrammierer: Simon
@@ -96,7 +96,7 @@ Die Aufgaben innerhalb des Projekts sind wie folgt verteilt:
       - endgültige abnahme aller codes auf korrektheit
 
    Code-Dokumentation:
-      - dokumentation jeglicher vorhandener codes
+      - Codedokumentation jeglicher vorhandener codes
       - Read The Docs: Kevin, Welf
 
 Logik:
@@ -114,14 +114,13 @@ Logik:
    - scripts:
       - build_2025_enriched_parquets: Simon
       - clean_timetables: Simon
-      - train_prediction_models: Welf
-      - train_timetable_boosting: Kevin
+      - train_prediction_models: Simon
+      - train_timetable_boosting: Simon
 
 
    - wvv_dashboard: 
       - app: - Hauptprogrammierer: Simon
              - Unterstützend: Welf, Kevin
-      - config: Kevin
       - kpis: Welf
       - service_policy: Welf
       - timetable: Simon
@@ -136,3 +135,6 @@ Diese Dateien sind durch kommunikationsprobelem entstanden sind.
       - kpi_definitions: Welf
       - kpi_repository: Welf
       - simulation: Kevin
+
+Anfangschecks der Daten
+   - analysis: Kevin, Welf
