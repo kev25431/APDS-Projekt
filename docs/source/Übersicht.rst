@@ -85,16 +85,20 @@ Die Aufgaben innerhalb des Projekts sind wie folgt verteilt:
 
    Die Aufgaben wurden alle als Gruppe erledigt, von der Ideen suche bis zur Implementierung, aufgrund der zusammenhänge ist nicht eindeutig zu sagen wer was genau gemacht hat, hier ein versuchter überblick.
 
+   Da alle Teilnehmer über verschieden Wissenstände verfügen wurden Aufgaben unterschiedlich gewichtet verteilt.
 
-   Coordinator: Kevin
+   Kevin
       - Terminorganisation in der Gruppe 
+      - Theorie Recherche
       - Aufsetzen Read the Docs
+      
    
-   Hauptprogrammierer: Simon
-      - endgültige abnahme aller codes auf korrektheit
+   Simon
+      - Implementierung der Zusammengefassten Ideen
 
-   Code-Dokumentation: Welf
+   Welf
       - Codedokumentation jeglicher vorhandener codes
+      - Recherche um Theorie und Praktische Anwendung zu vermitteln und selber zu Implementieren
       - Überarbeiten Read The Docs
 
 Logik:
