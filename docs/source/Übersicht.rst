@@ -126,8 +126,8 @@ Logik:
       - timetable: Simon
       - widgets: Simon
 
+Anfangsversuche, welche durch Kommunikationsprobleme entstanden sind und später andersweitig im code implementiert wurden.
    - Obsolete
-      Anfangsversuche, welche durch Kommunikationsprobleme entstanden sind und später andersweitig im code implementiert wurden.
       - distribution: Kevin
       - forecast_models: Welf
       - gnn_forecast: Kevin
