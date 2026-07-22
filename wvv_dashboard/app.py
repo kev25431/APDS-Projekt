@@ -1523,7 +1523,7 @@ class TransitDashboard(ctk.CTk):
             wechsel wie Aktivierung, Deaktivierung oder visuelle Hervorhebung zentral
             gesteuert werden können.
 
-        Parameter:
+            Parameter:
                 master: Eltern-Widget, in das der Button eingefügt wird.
                 text (str): Sichtbarer Text des Navigationsbuttons.
                 command: Callback-Funktion, die beim Klick auf den Button ausgeführt wird.
@@ -10010,7 +10010,7 @@ class TransitDashboard(ctk.CTk):
 
 
 
-    def run() -> None:
+def run() -> None:
         """
         Startet die Anwendung mit initialisiertem Datenrepository und GUI.
 
@@ -10032,14 +10032,13 @@ class TransitDashboard(ctk.CTk):
             Die Methode bildet den formalen Einstiegspunkt der Anwendung und koppelt
             Datenzugriff, Dashboard-Instanz und GUI-Laufzeit zusammen.
         """
-        if not DATA_DIR.exists():
-            raise FileNotFoundError(f"Datenordner nicht gefunden: {DATA_DIR}")
-        repo = TransitDataRepository(DATA_DIR)
-        app = TransitDashboard(repo)
-        app.mainloop()
+    if not DATA_DIR.exists():
+        raise FileNotFoundError(f"Datenordner nicht gefunden: {DATA_DIR}")
+    repo = TransitDataRepository(DATA_DIR)
+    app = TransitDashboard(repo)
+    app.mainloop()
 
 
 
-    if __name__ == "__main__":
-        
-        run()
+if __name__ == "__main__":
+    run()
