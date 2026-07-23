@@ -85,26 +85,18 @@ Die Aufgaben innerhalb des Projekts sind wie folgt verteilt:
 
    Da alle Teilnehmer über verschieden Wissenstände verfügen wurden Aufgaben unterschiedlich gewichtet verteilt.
 
-   Die Aufgaben wurden alle als Gruppe erledigt, von der Ideen suche bis zur Programmierung, aufgrund der zusammenhänge ist nicht eindeutig zu sagen wer was genau gemacht hat, hier ein versuchter überblick.
-   
-
    Kevin
       - Terminorganisation in der Gruppe 
       - Theorie Recherche
       - Aufsetzen Read the Docs
    
    Simon
-      - Verantwortlicher für die Implementierung 
+      - Verantwortlicher Programmieren, Datembeschaffung, Datenaufarbeitung
 
    Welf
       - Codedokumentation jeglicher vorhandener codes
-      - Recherche um Theorie und Praktische Anwendung zu vermitteln
+      - Recherche Theorie 
       - Überarbeiten Read The Docs
-
-Logik:
-   - Wie das Programm aufgebaut und dargsetellt werden sollte wurde in der Gruppe zusammen entschieden.
-   - Entscheidung welche ML-modellen verwendet und wie sie eingebaut wurden, wurde von der gruppe zusammen entschieden.
-   - Darstellungsformen wurden durch gruppenwahl entschieden.
 
 - Ordner
    - prediction:
@@ -122,13 +114,13 @@ Logik:
 
    - wvv_dashboard: 
       - app: Simon
-      - kpis: Welf
-      - service_policy: Welf
+      - kpis: Simon
+      - service_policy: Welf/Simon
       - timetable: Simon
       - widgets: Simon
 
 Codeideen welche verworfen wurden.
-   - Im Verlauf der Projektarbeit wurden mehrere Konzepte und Codeideen erarbeitet.
+   - Im Verlauf der Projektarbeit wurden mehrere Konzepte und Codeideen erarbeitet (teilweise nicht funktionsfähig.)
    - Obsolete
       - distribution: Kevin
       - forecast_models: Kevin
