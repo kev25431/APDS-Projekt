@@ -94,11 +94,11 @@ Die Aufgaben innerhalb des Projekts sind wie folgt verteilt:
       - Aufsetzen Read the Docs
    
    Simon
-      - Haputverantwortlicher für die Implementierung der Zusammengefassten Ideen nach Teamabsprache
+      - Verantwortlicher für die Implementierung 
 
    Welf
       - Codedokumentation jeglicher vorhandener codes
-      - Recherche um Theorie und Praktische Anwendung zu vermitteln und selber zu Implementieren
+      - Recherche um Theorie und Praktische Anwendung zu vermitteln
       - Überarbeiten Read The Docs
 
 Logik:
@@ -140,6 +140,7 @@ Codeideen welche verworfen wurden.
 
 Anfangschecks der Daten
    - analysis: Kevin, Welf
+   - Datenaufarbeitung: Simon
 
 
 
