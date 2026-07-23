@@ -131,7 +131,7 @@ Codeideen welche verworfen wurden.
       - simulation: Kevin / code funktions check Welf
 
 Anfangschecks der Daten
-   - analysis: Kevin, Welf
+   - Analyse: Kevin, Welf
    - Datenaufarbeitung: Simon
 
 
